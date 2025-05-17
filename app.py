@@ -138,17 +138,35 @@ def create_portfolio_overview():
         'Stock': 'Stocks',
         'Equity': 'Stocks',
         'ETF': 'ETFs',
+        'ETFs & Closed End Funds': 'ETFs',
         'CASH': 'Cash',
         'Bond': 'Bonds',
         'Fixed Income': 'Bonds',
         'Mutual Fund': 'Mutual Funds',
-        'Money Market': 'Cash'
+        'Money Market': 'Cash',
+        'Cash and Money Market': 'Cash'
     }
     
     # Print unique types before mapping
     print("Unique types before mapping:", df['type'].unique())
     
+    # Clean up NaN values and identify asset types based on multiple criteria
+    df['type'] = df['type'].fillna('Unknown')
+    
+    # Identify money market funds and cash positions
+    cash_symbols = ['SPAXX', 'FDRXX', 'SNSXX']
+    df.loc[df['symbol'].str.contains('|'.join(cash_symbols), case=False, na=False), 'type'] = 'Cash'
+    
+    # Identify ETFs based on common ETF symbols
+    etf_symbols = ['VOO', 'QQQ', 'TLT', 'IBIT']
+    df.loc[df['symbol'].isin(etf_symbols), 'type'] = 'ETFs'
+    
+    # Apply general type mapping for remaining positions
     df['type'] = df['type'].apply(lambda x: type_mapping.get(str(x).strip(), str(x).strip()))
+    
+    # Identify stocks based on description
+    stock_keywords = ['CORP', 'INC', 'CO', 'LTD', 'TECHNOLOGIES', 'PLATFORMS']
+    df.loc[df['description'].str.contains('|'.join(stock_keywords), case=False, na=False) & (df['type'] == 'Unknown'), 'type'] = 'Stocks'
     
     # Print unique types after mapping
     print("Unique types after mapping:", df['type'].unique())
@@ -158,6 +176,9 @@ def create_portfolio_overview():
         'value': 'sum',
         'symbol': 'count'
     }).reset_index()
+    
+    # Remove Unknown type if value is 0
+    portfolio_by_type = portfolio_by_type[~((portfolio_by_type['type'] == 'Unknown') & (portfolio_by_type['value'] == 0))]
     
     total_value = portfolio_by_type['value'].sum()
     portfolio_by_type['percentage'] = (portfolio_by_type['value'] / total_value * 100).round(2)
