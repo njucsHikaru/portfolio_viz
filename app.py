@@ -153,20 +153,26 @@ def create_portfolio_overview():
     # Clean up NaN values and identify asset types based on multiple criteria
     df['type'] = df['type'].fillna('Unknown')
     
-    # Identify money market funds and cash positions
+    # First apply the type mapping
+    df['type'] = df['type'].apply(lambda x: type_mapping.get(str(x).strip(), str(x).strip()))
+    
+    # Then identify specific assets
+    
+    # 1. Identify money market funds (these are true cash positions)
     cash_symbols = ['SPAXX', 'FDRXX', 'SNSXX']
     df.loc[df['symbol'].str.contains('|'.join(cash_symbols), case=False, na=False), 'type'] = 'Cash'
     
-    # Identify ETFs based on common ETF symbols
+    # 2. Identify ETFs based on common ETF symbols
     etf_symbols = ['VOO', 'QQQ', 'TLT', 'IBIT']
     df.loc[df['symbol'].isin(etf_symbols), 'type'] = 'ETFs'
     
-    # Apply general type mapping for remaining positions
-    df['type'] = df['type'].apply(lambda x: type_mapping.get(str(x).strip(), str(x).strip()))
-    
-    # Identify stocks based on description
+    # 3. Identify stocks based on description
     stock_keywords = ['CORP', 'INC', 'CO', 'LTD', 'TECHNOLOGIES', 'PLATFORMS']
     df.loc[df['description'].str.contains('|'.join(stock_keywords), case=False, na=False) & (df['type'] == 'Unknown'), 'type'] = 'Stocks'
+    
+    # 4. Identify stocks based on common stock symbols
+    stock_symbols = ['NVDA', 'GOOG', 'GOOGL', 'MSFT', 'AMZN', 'AAPL', 'META', 'ASML', 'UBER', 'KO', 'MCD', 'AMD', 'BILI', 'U', 'FFAI']
+    df.loc[df['symbol'].isin(stock_symbols), 'type'] = 'Stocks'
     
     # Print unique types after mapping
     print("Unique types after mapping:", df['type'].unique())
