@@ -1,11 +1,70 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 from pathlib import Path
 import traceback
+import os
+from werkzeug.utils import secure_filename
+import shutil
+from datetime import datetime
 
 app = Flask(__name__)
+
+# Configure upload settings
+UPLOAD_FOLDER = Path('input')
+ALLOWED_EXTENSIONS = {'csv'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def backup_existing_files():
+    """Backup existing CSV files to a backup directory"""
+    backup_dir = UPLOAD_FOLDER / 'backup' / datetime.now().strftime('%Y%m%d_%H%M%S')
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    
+    for csv_file in UPLOAD_FOLDER.glob('*.csv'):
+        if not csv_file.name.startswith('example_'):
+            shutil.copy2(csv_file, backup_dir / csv_file.name)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        
+        file = request.files['file']
+        file_type = request.form.get('file_type', 'fidelity')
+        
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Invalid file type. Please upload a CSV file.'}), 400
+        
+        # Backup existing files
+        backup_existing_files()
+        
+        # Save the file with appropriate name based on type
+        if file_type == 'fidelity':
+            filename = 'Portfolio_Positions.csv'
+        else:
+            filename = 'schwab.csv'
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        return jsonify({
+            'message': 'File uploaded successfully. Portfolio data has been updated.',
+            'filename': filename
+        })
+        
+    except Exception as e:
+        print(f"Error in upload_file: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 def standardize_type(type_str):
     """Standardize asset type names"""
@@ -551,6 +610,45 @@ def get_portfolio_summary():
             'day_change': 0,
             'cash_balance': 0
         })
+
+@app.route('/api/files', methods=['GET'])
+def list_files():
+    try:
+        files = []
+        for file in UPLOAD_FOLDER.glob('*.csv'):
+            # Skip example files
+            if not file.name.startswith('example_'):
+                files.append({
+                    'name': file.name,
+                    'size': os.path.getsize(file) / 1024,  # Convert to KB
+                    'modified': datetime.fromtimestamp(os.path.getmtime(file)).strftime('%Y-%m-%d %H:%M:%S')
+                })
+        return jsonify(files)
+    except Exception as e:
+        print(f"Error listing files: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/files/<filename>', methods=['DELETE'])
+def delete_file(filename):
+    try:
+        if filename.startswith('example_'):
+            return jsonify({'error': 'Cannot delete example files'}), 403
+            
+        file_path = UPLOAD_FOLDER / filename
+        if file_path.exists():
+            # Backup the file before deletion
+            backup_dir = UPLOAD_FOLDER / 'backup' / datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(file_path, backup_dir / filename)
+            
+            # Delete the file
+            os.remove(file_path)
+            return jsonify({'message': f'File {filename} deleted successfully'})
+        else:
+            return jsonify({'error': 'File not found'}), 404
+    except Exception as e:
+        print(f"Error deleting file: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     # Print pie chart data
