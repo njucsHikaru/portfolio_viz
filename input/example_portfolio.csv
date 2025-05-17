@@ -1,0 +1,13 @@
+Account Number,Account Name,Symbol,Description,Quantity,Last Price,Last Price Change,Current Value,Today's Gain/Loss Dollar,Today's Gain/Loss Percent,Total Gain/Loss Dollar,Total Gain/Loss Percent,Percent Of Account,Cost Basis Total,Average Cost Basis,Type
+A123456,Personal Account,SPAXX,MONEY MARKET FUND,,,,$1000.00,,,,,5.00%,,,Cash
+B123456,IRA Account,SPAXX,MONEY MARKET FUND,,,,$2000.00,,,,,10.00%,,,Cash
+B123456,IRA Account,AAPL,APPLE INC,10,$180.50,+$0.50,$1805.00,+$5.00,+0.28%,+$305.00,+20.33%,9.03%,$1500.00,$150.00,Stock
+B123456,IRA Account,Pending Activity,,,,,$1000.00,,,,,,,,
+C123456,401K Account,SPAXX,MONEY MARKET FUND,,,,$3000.00,,,,,15.00%,,,Cash
+C123456,401K Account,Pending Activity,,,,,-$1000.00,,,,,,,,
+D123456,Retirement,VTI,VANGUARD TOTAL STOCK MKT ETF,50,$220.30,+$1.20,$11015.00,+$60.00,+0.55%,+$2015.00,+22.39%,25.00%,$9000.00,$180.00,ETF
+D123456,Retirement,BND,VANGUARD TOTAL BOND MKT ETF,40,$75.40,+$0.20,$3016.00,+$8.00,+0.27%,-$184.00,-5.75%,15.00%,$3200.00,$80.00,ETF
+D123456,Retirement,VEA,VANGUARD FTSE DEVELOPED ETF,30,$48.60,+$0.30,$1458.00,+$9.00,+0.62%,+$258.00,+21.50%,7.29%,$1200.00,$40.00,ETF
+E123456,Trading Account,QQQ,INVESCO QQQ TRUST ETF,15,$380.40,+$2.50,$5706.00,+$37.50,+0.66%,+$706.00,+14.12%,28.53%,$5000.00,$333.33,ETF
+E123456,Trading Account,MSFT,MICROSOFT CORP,10,$335.50,+$1.80,$3355.00,+$18.00,+0.54%,+$855.00,+34.20%,16.78%,$2500.00,$250.00,Stock
+E123456,Trading Account,GOOGL,ALPHABET INC CLASS A,5,$125.60,+$1.20,$628.00,+$6.00,+0.97%,+$128.00,+25.60%,3.14%,$500.00,$100.00,Stock 
