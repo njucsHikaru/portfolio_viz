@@ -244,7 +244,18 @@
                 right: 20px;
             }
         }
+        #reset-filters {
+            padding: 6px 12px;
+            font-size: 14px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        #reset-filters:hover {
+            background-color: #6c757d;
+            color: white;
+        }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div class="container">
@@ -287,6 +298,11 @@
             <div class="filter-group">
                 <label class="filter-label" for="description-filter">Description:</label>
                 <input type="text" id="description-filter" class="search-input" placeholder="Search description...">
+            </div>
+            <div class="filter-group">
+                <button id="reset-filters" class="btn btn-outline-secondary" style="margin-left: 10px;">
+                    <i class="fas fa-undo"></i> Reset Filters
+                </button>
             </div>
             <div class="active-filters">
                 <div id="active-filter-tags"></div>
@@ -609,10 +625,32 @@
 
                 // Apply filters
                 let filteredData = data.filter(holding => {
-                    if (filterState.type !== 'all' && holding.type !== filterState.type) return false;
-                    if (filterState.account !== 'all' && holding.account !== filterState.account) return false;
-                    if (filterState.symbol && !holding.symbol.toLowerCase().includes(filterState.symbol.toLowerCase())) return false;
-                    if (filterState.description && !holding.description.toLowerCase().includes(filterState.description.toLowerCase())) return false;
+                    // Type filter - case insensitive
+                    if (filterState.type !== 'all' && 
+                        holding.type.toLowerCase() !== filterState.type.toLowerCase()) {
+                        return false;
+                    }
+                    
+                    // Account filter - check if account contains the filter value
+                    if (filterState.account !== 'all') {
+                        const accounts = holding.account.split(',').map(a => a.trim());
+                        if (!accounts.some(a => a.toLowerCase() === filterState.account.toLowerCase())) {
+                            return false;
+                        }
+                    }
+                    
+                    // Symbol filter - case insensitive partial match
+                    if (filterState.symbol && 
+                        !holding.symbol.toLowerCase().includes(filterState.symbol.toLowerCase())) {
+                        return false;
+                    }
+                    
+                    // Description filter - case insensitive partial match
+                    if (filterState.description && 
+                        !holding.description.toLowerCase().includes(filterState.description.toLowerCase())) {
+                        return false;
+                    }
+                    
                     return true;
                 });
 
@@ -703,6 +741,32 @@
                     accountFilter.append(`<option value="${account}">${account}</option>`);
                 });
             });
+        }
+
+        // Add reset button handler
+        $('#reset-filters').click(function() {
+            resetAllFilters();
+        });
+
+        // Add to JavaScript section
+        function resetAllFilters() {
+            // Reset filter state
+            filterState = {
+                type: 'all',
+                account: 'all',
+                symbol: '',
+                description: '',
+                chartSelection: null
+            };
+            
+            // Reset UI elements
+            $('#type-filter').val('all');
+            $('#account-filter').val('all');
+            $('#symbol-filter').val('');
+            $('#description-filter').val('');
+            
+            // Apply the reset
+            applyFilters();
         }
 
         // Initial load
