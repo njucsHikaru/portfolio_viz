@@ -328,7 +328,7 @@ def create_portfolio_overview():
     # Update layout
     fig.update_layout(
         title={
-            'text': 'Asset Allocation (Click to filter holdings)',
+            'text': 'Asset Allocation',
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
@@ -339,8 +339,8 @@ def create_portfolio_overview():
         height=500,
         margin=dict(l=50, r=50, t=50, b=50)
     )
-    
-    return fig.to_json()
+
+    return fig.to_json({"staticPlot": True})
 
 @app.route('/')
 def index():
