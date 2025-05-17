@@ -7,6 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         .card {
             margin-bottom: 20px;
@@ -274,6 +276,33 @@
         h1, h2 {
             color: #e0e0e0;
         }
+        .rotate-180 {
+            transform: rotate(180deg);
+            transition: transform 0.3s ease;
+        }
+        .card-header[data-bs-toggle="collapse"] {
+            transition: background-color 0.3s ease;
+        }
+        .card-header[data-bs-toggle="collapse"]:hover {
+            background-color: #f0f0f0;
+        }
+        .fa-chevron-down {
+            transition: transform 0.3s ease;
+        }
+        .transition-transform {
+            transition: transform 0.3s ease;
+        }
+        [aria-expanded="true"] .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+        .card-header[role="button"] {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.3s ease;
+        }
+        .card-header[role="button"]:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
@@ -283,50 +312,55 @@
         
         <!-- File Upload Section -->
         <div class="upload-section" style="margin-bottom: 20px;">
-            <form id="upload-form" enctype="multipart/form-data" class="mb-3">
-                <div class="card">
-                    <div class="card-header">
-                        Import Portfolio Data
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="file-type" class="form-label">File Type:</label>
-                            <select class="form-select" id="file-type" name="file-type" style="width: auto; display: inline-block; margin-right: 15px;">
-                                <option value="fidelity">Fidelity CSV</option>
-                                <option value="schwab">Schwab CSV</option>
-                            </select>
-                            <input type="file" class="form-control" id="csv-file" name="file" accept=".csv" style="width: auto; display: inline-block;">
-                            <button type="submit" class="btn btn-primary" style="margin-left: 10px;">
-                                <i class="fas fa-upload"></i> Upload
-                            </button>
-                        </div>
-                        <div class="alert alert-info" role="alert">
-                            <i class="fas fa-info-circle"></i> 
-                            Upload your portfolio CSV file exported from Fidelity or Schwab. Your data is processed locally and not stored on any server.
-                        </div>
-                        <div id="upload-status" style="display: none;" class="alert" role="alert"></div>
-                        
-                        <!-- Current Files Section -->
-                        <div class="current-files mt-3">
-                            <h6>Current Files</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm" id="files-table">
-                                    <thead>
-                                        <tr>
-                                            <th>File Name</th>
-                                            <th>Size</th>
-                                            <th>Modified</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+            <div class="card">
+                <div class="card-header" role="button" data-bs-toggle="collapse" data-bs-target="#uploadCollapse" aria-expanded="true" aria-controls="uploadCollapse">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-file-upload me-2"></i> Import Portfolio Data</span>
+                        <i class="fas fa-chevron-down transition-transform"></i>
                     </div>
                 </div>
-            </form>
+                <div class="collapse show" id="uploadCollapse">
+                    <div class="card-body">
+                        <form id="upload-form" enctype="multipart/form-data" class="mb-3">
+                            <div class="mb-3">
+                                <label for="file-type" class="form-label">File Type:</label>
+                                <select class="form-select" id="file-type" name="file-type" style="width: auto; display: inline-block; margin-right: 15px;">
+                                    <option value="fidelity">Fidelity CSV</option>
+                                    <option value="schwab">Schwab CSV</option>
+                                </select>
+                                <input type="file" class="form-control" id="csv-file" name="file" accept=".csv" style="width: auto; display: inline-block;">
+                                <button type="submit" class="btn btn-primary" style="margin-left: 10px;">
+                                    <i class="fas fa-upload"></i> Upload
+                                </button>
+                            </div>
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle"></i> 
+                                Upload your portfolio CSV file exported from Fidelity or Schwab. Your data is processed locally and not stored on any server.
+                            </div>
+                            <div id="upload-status" style="display: none;" class="alert" role="alert"></div>
+                            
+                            <!-- Current Files Section -->
+                            <div class="current-files mt-3">
+                                <h6>Current Files</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm" id="files-table">
+                                        <thead>
+                                            <tr>
+                                                <th>File Name</th>
+                                                <th>Size</th>
+                                                <th>Modified</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Summary Section -->
@@ -999,11 +1033,19 @@
 
         // Initial load
         $(document).ready(function() {
+            // Initialize all data
             loadSummary();
             loadCharts();
             loadAccounts();
             loadHoldings();
             loadFiles();
+
+            // Add collapse event handler
+            $('#uploadCollapse').on('show.bs.collapse hide.bs.collapse', function() {
+                const header = $(this).prev('.card-header');
+                const icon = header.find('.fa-chevron-down');
+                icon.toggleClass('rotate-180');
+            });
 
             // Add event listeners for filters
             $('#type-filter').change(function() {
