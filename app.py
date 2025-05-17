@@ -24,14 +24,45 @@ def standardize_type(type_str):
     }
     return type_mapping.get(str(type_str).strip(), type_str)
 
+def determine_asset_type(row):
+    symbol = str(row['symbol']).upper()
+    description = str(row['description']).upper()
+    
+    # Cash/Money Market
+    if any(cash_sym in symbol for cash_sym in ['SPAXX', 'FDRXX', 'SNSXX', 'SWVXX']):
+        return 'Cash'
+    
+    # ETFs - Common ETF symbols and keywords
+    etf_keywords = ['ETF', 'ISHARES', 'VANGUARD ETF', 'SPDR', 'PROSHARES', 'INVESCO']
+    if (symbol in ['VOO', 'QQQ', 'TLT', 'IBIT', 'VTI', 'SPY', 'IVV', 'VEA', 'BND', 'VWO'] or
+        any(keyword in description for keyword in etf_keywords)):
+        return 'ETFs'
+    
+    # Mutual Funds - Common keywords and patterns
+    mutual_fund_keywords = ['FUND', 'VANGUARD TARGET', 'INDEX FUND', 'FIDELITY', 'BALANCED FUND']
+    if (any(keyword in description for keyword in mutual_fund_keywords) or
+        (len(symbol) == 5 and symbol.endswith('X'))):  # Common mutual fund symbol pattern
+        return 'Mutual Funds'
+    
+    # Bonds - Treasury and corporate bond patterns
+    if (symbol.startswith('91282') or  # Treasury bond pattern
+        'TREASURY' in description or
+        'BOND' in description or
+        'NOTE' in description or
+        'GOVT' in description):
+        return 'Bonds'
+    
+    # Everything else is considered as Stocks
+    return 'Stocks'
+
 def load_and_process_data():
     # Get all CSV files from input directory
     input_dir = Path("input")
     csv_files = list(input_dir.glob("*.csv"))
     
     print(f"\nFound {len(csv_files)} CSV files in input directory:")
-    for i, f in enumerate(csv_files, 1):
-        print(f"  - Acct{i}: {f}")
+    for f in csv_files:
+        print(f"  - {f.stem}: {f}")
     
     all_positions = []
     account_totals = []
@@ -44,16 +75,16 @@ def load_and_process_data():
         'nan'
     ]
     
-    for account_num, csv_file in enumerate(csv_files, 1):
-        account_name = f"Acct{account_num}"
+    for csv_file in csv_files:
+        account_name = csv_file.stem  # Get filename without extension
         print(f"\nProcessing file for {account_name}: {csv_file}")
         
         try:
             # Check if this is the 652 file
-            is_652_file = '652' in str(csv_file)
+            is_schwab_file = 'schwab' in str(csv_file)
             
             # Read the CSV file
-            if is_652_file:
+            if is_schwab_file:
                 # Skip the first 3 rows for 652 file
                 df = pd.read_csv(csv_file, skiprows=3)
             else:
@@ -92,21 +123,26 @@ def load_and_process_data():
                         return default
                     
                     # Define column mappings for different file formats
-                    if is_652_file:
+                    if is_schwab_file:
                         value_cols = ['Mkt Val (Market Value)']
                         cost_basis_cols = ['Cost Basis']
                         gain_loss_cols = ['Gain $ (Gain/Loss $)']
                         quantity_cols = ['Qty (Quantity)']
                         price_cols = ['Price']
+                        type_cols = ['Security Type']
+                        account_cols = ['Account Name']
                     else:
-                        value_cols = ['Current Value', 'Mkt Val (Market Value)']
-                        cost_basis_cols = ['Cost Basis Total', 'Cost Basis']
-                        gain_loss_cols = ['Gain/Loss Total', 'Total Gain/Loss Dollar', 'Gain/Loss $']
-                        quantity_cols = ['Quantity', 'Qty (Quantity)']
-                        price_cols = ['Last Price', 'Price']
+                        value_cols = ['Current Value']
+                        cost_basis_cols = ['Cost Basis Total']
+                        gain_loss_cols = ['Total Gain/Loss Dollar']
+                        quantity_cols = ['Quantity']
+                        price_cols = ['Last Price']
+                        type_cols = ['Type']
+                        account_cols = ['Account Name']
                     
-                    # Determine initial type
-                    initial_type = str(row.get('Type', row.get('Security Type', 'Unknown')))
+                    # Determine initial type and account
+                    initial_type = str(row.get(type_cols[0], 'Unknown'))
+                    account_name = str(row.get(account_cols[0], csv_file.stem))
                     
                     # Create position dictionary
                     position = {
@@ -118,12 +154,14 @@ def load_and_process_data():
                         'gain_loss': get_value_from_columns(row, gain_loss_cols),
                         'quantity': get_value_from_columns(row, quantity_cols),
                         'price': get_value_from_columns(row, price_cols),
-                        'account': account_name  # Add account information
+                        'account': account_name  # Use account name from file if available
                     }
                     
-                    # Add to positions list
-                    all_positions.append(position)
-                    print(f"Added Position: {position['symbol']} - {position['description']} - Account: {position['account']} - Value: ${position['value']:,.2f}")
+                    # Only add positions with valid values
+                    if position['value'] > 0:
+                        # Add to positions list
+                        all_positions.append(position)
+                        print(f"Added Position: {position['symbol']} - {position['description']} - Type: {position['type']} - Account: {position['account']} - Value: ${position['value']:,.2f}")
                 
                 except Exception as e:
                     print(f"Error processing row: {e}")
@@ -183,41 +221,8 @@ def load_and_process_data():
     # Print the data after merging
     print("\nAfter merging - number of positions:", len(positions_df))
     
-    # Standardize types based on symbols and descriptions
-    def determine_asset_type(row):
-        symbol = str(row['symbol'])
-        description = str(row['description'])
-        
-        # Cash/Money Market
-        if any(cash_sym in symbol.upper() for cash_sym in ['SPAXX', 'FDRXX', 'SNSXX']):
-            return 'Cash'
-        
-        # ETFs
-        if symbol in ['VOO', 'QQQ', 'TLT', 'IBIT']:
-            return 'ETFs'
-        
-        # Mutual Funds
-        if 'VANGUARD TARGET' in description.upper():
-            return 'Mutual Funds'
-        
-        # Bonds
-        if symbol.startswith('91281') or 'TREASURY' in description.upper():
-            return 'Bonds'
-        
-        # Stocks (common stock symbols)
-        stock_symbols = ['NVDA', 'GOOG', 'GOOGL', 'MSFT', 'AMZN', 'AAPL', 'META', 'ASML', 'UBER', 
-                        'KO', 'MCD', 'AMD', 'BILI', 'U', 'FFAI', 'SMCI', 'TSLA']
-        if symbol in stock_symbols:
-            return 'Stocks'
-        
-        # Map any remaining types using the standardization function
-        return standardize_type(row['type'])
-    
-    # Apply type standardization
+    # Apply type determination
     positions_df['type'] = positions_df.apply(determine_asset_type, axis=1)
-    
-    # Set any remaining Unknown types to Stocks
-    positions_df.loc[positions_df['type'] == 'Unknown', 'type'] = 'Stocks'
     
     print(f"\nProcessed data summary:")
     print(f"Number of positions: {len(positions_df)}")
@@ -225,8 +230,17 @@ def load_and_process_data():
     if not positions_df.empty:
         print("\nPositions DataFrame columns:", positions_df.columns.tolist())
         print("\nSample of positions:")
-        print(positions_df[['symbol', 'description', 'account', 'value', 'gain_loss']].head().to_string())
+        print(positions_df[['symbol', 'description', 'type', 'account', 'value', 'gain_loss']].head().to_string())
         print("\nUnique types after processing:", positions_df['type'].unique())
+        
+        # Print type distribution
+        type_distribution = positions_df.groupby('type').agg({
+            'symbol': 'count',
+            'value': 'sum'
+        }).round(2)
+        type_distribution['percentage'] = (type_distribution['value'] / type_distribution['value'].sum() * 100).round(2)
+        print("\nType distribution:")
+        print(type_distribution.to_string())
     
     return positions_df, pd.DataFrame(account_totals)
 
@@ -361,30 +375,44 @@ def get_symbol_details(symbol):
         # Group by account to get details from each account
         details = []
         for account, group in symbol_positions.groupby('account'):
+            quantity = float(group['quantity'].sum())
+            cost_basis = float(group['cost_basis'].sum())
+            # Calculate unit cost (cost per share)
+            unit_cost = cost_basis / quantity if quantity != 0 else 0.0
+            
             position = {
                 'account': account,
                 'symbol': symbol,
                 'description': group.iloc[0]['description'],
                 'type': group.iloc[0]['type'],
-                'quantity': float(group['quantity'].sum()),
+                'quantity': quantity,
                 'price': float(group.iloc[0]['price']),
                 'value': float(group['value'].sum()),
-                'cost_basis': float(group['cost_basis'].sum()),
-                'gain_loss': float(group['gain_loss'].sum())
+                'cost_basis': cost_basis,
+                'gain_loss': float(group['gain_loss'].sum()),
+                'unit_cost': unit_cost
             }
             details.append(position)
         
+        # Sort details by unit cost in descending order
+        details.sort(key=lambda x: x['unit_cost'], reverse=True)
+        
         # Add total row
+        total_quantity = float(symbol_positions['quantity'].sum())
+        total_cost_basis = float(symbol_positions['cost_basis'].sum())
+        total_unit_cost = total_cost_basis / total_quantity if total_quantity != 0 else 0.0
+        
         total = {
             'account': 'Total',
             'symbol': symbol,
             'description': symbol_positions.iloc[0]['description'],
             'type': symbol_positions.iloc[0]['type'],
-            'quantity': float(symbol_positions['quantity'].sum()),
+            'quantity': total_quantity,
             'price': float(symbol_positions.iloc[0]['price']),
             'value': float(symbol_positions['value'].sum()),
-            'cost_basis': float(symbol_positions['cost_basis'].sum()),
-            'gain_loss': float(symbol_positions['gain_loss'].sum())
+            'cost_basis': total_cost_basis,
+            'gain_loss': float(symbol_positions['gain_loss'].sum()),
+            'unit_cost': total_unit_cost
         }
         details.append(total)
         
@@ -402,25 +430,10 @@ def get_holdings_by_type(asset_type):
         # Get account filter from query parameter
         account_filter = request.args.get('account', 'all')
         
-        # Print all unique types before filtering
         print("\nAll unique types in positions_df:")
         print(positions_df['type'].unique())
         
-        # Apply type filter first
-        if asset_type != 'all':
-            positions_df = positions_df[positions_df['type'] == asset_type]
-            print(f"\nFiltered for asset_type: {asset_type}")
-            print(f"Number of positions after type filtering: {len(positions_df)}")
-        
-        # Apply account filter if specified
-        if account_filter != 'all':
-            positions_df = positions_df[positions_df['account'] == account_filter]
-            print(f"\nFiltered for account: {account_filter}")
-            print(f"Number of positions after account filtering: {len(positions_df)}")
-        
-        print(f"\nFiltering holdings for type: {asset_type} and account: {account_filter}")
-        
-        # If showing all accounts, merge positions with the same symbol
+        # If showing all accounts, merge positions with the same symbol first
         if account_filter == 'all':
             # Group by symbol
             merged_positions = []
@@ -448,6 +461,23 @@ def get_holdings_by_type(asset_type):
             # Convert back to DataFrame
             positions_df = pd.DataFrame(merged_positions)
         
+        # Apply type filter after merging
+        if asset_type != 'all':
+            positions_df = positions_df[positions_df['type'].str.lower() == asset_type.lower()]
+            print(f"\nFiltered for asset_type: {asset_type}")
+            print(f"Number of positions after type filtering: {len(positions_df)}")
+        
+        # Apply account filter if specified
+        if account_filter != 'all':
+            # For merged positions, check if the account is in the accounts list
+            if 'accounts' in positions_df.columns:
+                positions_df = positions_df[positions_df['accounts'].apply(lambda x: account_filter in x)]
+            else:
+                positions_df = positions_df[positions_df['account'] == account_filter]
+            print(f"\nFiltered for account: {account_filter}")
+            print(f"Number of positions after account filtering: {len(positions_df)}")
+        
+        print(f"\nFiltering holdings for type: {asset_type} and account: {account_filter}")
         print(f"Found {len(positions_df)} positions")
         
         holdings = []

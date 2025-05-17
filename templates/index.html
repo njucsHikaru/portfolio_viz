@@ -34,10 +34,10 @@
         }
         .chart-box {
             flex: 1;
-            background-color: white;
+            background-color: #363636;
             border-radius: 8px;
             padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             min-height: 500px;
             display: flex;
             flex-direction: column;
@@ -46,15 +46,16 @@
             flex: 1;
         }
         .summary-box {
-            background-color: #f8f9fa;
+            background-color: #363636;
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .summary-value {
             font-size: 24px;
             font-weight: bold;
-            color: #2c3e50;
+            color: #e0e0e0;
         }
         .summary-label {
             color: #6c757d;
@@ -64,33 +65,40 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f5f5f5;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
         }
         .container {
             width: 100%;
             max-width: none;
             margin: 0 auto;
-            background-color: white;
+            background-color: #2d2d2d;
             padding: 20px 30px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+            background-color: #2d2d2d;
         }
         th {
-            background-color: #f8f9fa;
+            background-color: #404040;
+            color: #e0e0e0;
             font-weight: bold;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #505050;
+        }
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #404040;
+            color: #e0e0e0;
         }
         tr:hover {
-            background-color: #f5f5f5;
+            background-color: #404040;
         }
         .number {
             text-align: right;
@@ -99,16 +107,17 @@
             margin: 10px 0;
         }
         .positive {
-            color: #28a745;
+            color: #00b894;
         }
         .negative {
-            color: #dc3545;
+            color: #ff7675;
         }
         .filter-section {
+            background-color: #363636;
             margin: 20px 0;
             padding: 15px;
-            background-color: #f8f9fa;
             border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .filter-group {
             display: inline-block;
@@ -124,10 +133,11 @@
             padding: 10px 0;
         }
         .filter-tag {
+            background-color: #404040;
+            color: #e0e0e0;
             display: inline-block;
             padding: 5px 10px;
             margin: 0 5px 5px 0;
-            background-color: #e9ecef;
             border-radius: 15px;
             font-size: 0.9em;
         }
@@ -140,16 +150,21 @@
             color: #dc3545;
         }
         .search-input {
+            background-color: #404040;
+            border: 1px solid #505050;
+            color: #e0e0e0;
             padding: 6px 12px;
-            border: 1px solid #ced4da;
             border-radius: 4px;
             width: 200px;
+        }
+        .search-input::placeholder {
+            color: #808080;
         }
         .clickable {
             cursor: pointer;
         }
         .details-row {
-            background-color: #f8f9fa;
+            background-color: #363636;
             font-size: 0.95em;
         }
         .details-row td {
@@ -160,7 +175,7 @@
             width: 100%;
         }
         .details-table th {
-            background-color: #e9ecef;
+            background-color: #404040;
             font-size: 0.9em;
             padding: 0.5rem;
         }
@@ -168,21 +183,21 @@
             padding: 0.5rem;
         }
         .total-row {
+            background-color: #404040;
             font-weight: bold;
-            background-color: #e9ecef;
         }
         .expandable-row {
             transition: background-color 0.2s;
         }
         .expandable-row:hover {
-            background-color: #f8f9fa;
+            background-color: #404040;
         }
         .multi-account-row {
-            background-color: #f5f5f5;
+            background-color: #363636;
             position: relative;
         }
         .multi-account-row:hover {
-            background-color: #eeeeee;
+            background-color: #404040;
         }
         .multi-account-row:after {
             content: '▼';
@@ -192,10 +207,10 @@
             font-size: 12px;
         }
         .multi-account-row:hover:after {
-            color: #2c3e50;
+            color: #e0e0e0;
         }
         .selected-row {
-            background-color: #e9ecef;
+            background-color: #404040;
         }
         .sort-header {
             cursor: pointer;
@@ -245,14 +260,19 @@
             }
         }
         #reset-filters {
+            background-color: #404040;
+            color: #e0e0e0;
+            border: 1px solid #505050;
             padding: 6px 12px;
             font-size: 14px;
             border-radius: 4px;
             transition: all 0.2s;
         }
         #reset-filters:hover {
-            background-color: #6c757d;
-            color: white;
+            background-color: #505050;
+        }
+        h1, h2 {
+            color: #e0e0e0;
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -544,47 +564,58 @@
                 textposition: 'auto',
                 type: 'bar',
                 marker: {
-                    color: '#2c3e50',
+                    color: '#00b894',
                     opacity: 0.8
                 },
                 hovertemplate: '<b>%{x}</b><br>' +
                               'Value: %{text}<br>' +
                               '<extra></extra>',
-                cliponaxis: false,  // Prevent clipping of small bars
-                base: minBarHeight  // Add minimum height to all bars
+                cliponaxis: false,
+                base: minBarHeight
             };
 
             const layout = {
-                title: 'Holdings by Value',
+                title: {
+                    text: 'Holdings by Value',
+                    font: {
+                        color: '#e0e0e0'
+                    }
+                },
                 showlegend: false,
                 xaxis: {
-                    showticklabels: true,     // Show symbol labels
-                    tickangle: -45,           // Rotate labels
-                    title: '',                // Hide axis title
-                    showgrid: false,          // Hide x-axis grid
-                    zeroline: false           // Hide x-axis zero line
+                    showticklabels: true,
+                    tickangle: -45,
+                    title: '',
+                    showgrid: false,
+                    zeroline: false,
+                    tickfont: {
+                        color: '#e0e0e0'
+                    }
                 },
                 yaxis: {
                     title: 'Value',
                     tickformat: '$,.0f',
-                    range: [0, maxValue * 1.1],  // Add 10% padding to top
-                    showgrid: true,              // Show y-axis grid
-                    gridcolor: '#f0f0f0'         // Light grid color
+                    range: [0, maxValue * 1.1],
+                    showgrid: true,
+                    gridcolor: '#404040',
+                    tickfont: {
+                        color: '#e0e0e0'
+                    }
                 },
                 margin: {
-                    l: 100,  // Left margin for y-axis labels
-                    r: 20,   // Reduced right margin
-                    t: 40,   // Reduced top margin
-                    b: 80    // Increased bottom margin for symbol labels
+                    l: 100,
+                    r: 20,
+                    t: 40,
+                    b: 80
                 },
-                bargap: 0.1,  // Reduce gap between bars
-                plot_bgcolor: 'white',
-                paper_bgcolor: 'white'
+                bargap: 0.1,
+                paper_bgcolor: '#363636',
+                plot_bgcolor: '#363636'
             };
 
             const config = {
                 responsive: true,
-                displayModeBar: false  // Hide the mode bar
+                displayModeBar: false
             };
 
             Plotly.newPlot('holdings-bar-chart', [trace], layout, config);
@@ -603,6 +634,155 @@
                     // Trigger the click event to expand details
                     setTimeout(() => targetRow.click(), 500);
                 }
+            });
+        }
+
+        // Update portfolio overview chart based on filtered holdings
+        function updatePortfolioOverview(filteredData) {
+            // Group holdings by type and calculate values
+            const portfolioByType = {};
+            let totalValue = 0;
+            
+            // First pass: calculate total value
+            filteredData.forEach(holding => {
+                totalValue += parseFloat(holding.value) || 0;
+            });
+
+            // Second pass: group by type and calculate percentages
+            filteredData.forEach(holding => {
+                const type = holding.type;
+                const value = parseFloat(holding.value) || 0;
+                
+                if (!portfolioByType[type]) {
+                    portfolioByType[type] = {
+                        value: 0,
+                        count: 0,
+                        percentage: 0
+                    };
+                }
+                portfolioByType[type].value += value;
+                portfolioByType[type].count += 1;
+            });
+
+            // Calculate percentages
+            Object.keys(portfolioByType).forEach(type => {
+                portfolioByType[type].percentage = (portfolioByType[type].value / totalValue * 100);
+            });
+
+            // Convert to arrays for plotting
+            const types = Object.keys(portfolioByType);
+            const values = types.map(type => portfolioByType[type].value);
+            
+            // Sort by value descending
+            const sortedIndices = values.map((_, i) => i)
+                .sort((a, b) => values[b] - values[a]);
+            
+            const sortedTypes = sortedIndices.map(i => types[i]);
+            const sortedValues = sortedIndices.map(i => values[i]);
+
+            // Create annotations
+            const annotations = [];
+            
+            // Add total portfolio value at the top
+            annotations.push({
+                x: 0.75,
+                y: 0.95,
+                text: `<b>Total Portfolio Value:</b><br>${formatCurrency(totalValue)}`,
+                showarrow: false,
+                align: 'center',
+                xanchor: 'center',
+                yanchor: 'top',
+                font: { size: 14 }
+            });
+
+            // Add individual asset type details
+            const spacing = 0.8 / (types.length + 1);
+            sortedTypes.forEach((type, i) => {
+                const value = portfolioByType[type].value;
+                const percentage = portfolioByType[type].percentage;
+                const y_pos = 0.8 - (i + 1) * spacing;
+                
+                annotations.push({
+                    x: 0.75,
+                    y: y_pos,
+                    text: `<b>${type}</b><br>${formatCurrency(value)} (${percentage.toFixed(1)}%)`,
+                    showarrow: false,
+                    align: 'center',
+                    xanchor: 'center',
+                    yanchor: 'middle',
+                    font: { size: 12 }
+                });
+            });
+
+            // Create pie chart data
+            const trace = {
+                values: sortedValues,
+                labels: sortedTypes,
+                type: 'pie',
+                domain: { x: [0, 0.5], y: [0, 1] },
+                textposition: 'inside',
+                texttemplate: '%{label}<br>%{percent:.1f}%',
+                hovertemplate: '<b>%{label}</b><br>' +
+                             'Value: ' + formatCurrency('%{value}') + '<br>' +
+                             'Allocation: %{percent:.1f}%<br>' +
+                             '<extra></extra>',
+                textinfo: 'label+percent',
+                direction: 'clockwise',
+                sort: false,
+                marker: {
+                    colors: [
+                        '#00b894',  // 青绿色 - Stocks
+                        '#0984e3',  // 深蓝色 - ETFs
+                        '#6c5ce7',  // 紫色 - Mutual Funds
+                        '#fdcb6e',  // 金色 - Bonds
+                        '#a8e6cf'   // 薄荷色 - Cash
+                    ],
+                    line: {
+                        color: '#2d2d2d',
+                        width: 2
+                    }
+                }
+            };
+
+            const layout = {
+                title: {
+                    text: 'Asset Allocation (Click to filter holdings)',
+                    y: 0.95,
+                    x: 0.5,
+                    xanchor: 'center',
+                    yanchor: 'top',
+                    font: {
+                        color: '#e0e0e0'
+                    }
+                },
+                showlegend: false,
+                annotations: annotations.map(ann => ({
+                    ...ann,
+                    font: {
+                        ...ann.font,
+                        color: '#e0e0e0'
+                    }
+                })),
+                height: 500,
+                margin: { l: 50, r: 50, t: 50, b: 50 },
+                paper_bgcolor: '#363636',
+                plot_bgcolor: '#363636'
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('portfolio-overview', [trace], layout, config);
+
+            // Add click event handler
+            document.getElementById('portfolio-overview').on('plotly_click', function(data) {
+                const point = data.points[0];
+                filterState.type = point.label;
+                filterState.chartSelection = point.label;
+                $('#type-filter').val(point.label);
+                applyFilters();
             });
         }
 
@@ -657,8 +837,9 @@
                 // Sort the data
                 filteredData = sortHoldings(filteredData, currentSort.column, currentSort.direction);
                 
-                // Update bar chart with filtered data
+                // Update both charts with filtered data
                 updateBarChart(filteredData);
+                updatePortfolioOverview(filteredData);
                 
                 const tbody = $('#holdings-table tbody');
                 tbody.empty();
@@ -710,26 +891,22 @@
         // Load and display charts
         function loadCharts() {
             // Load portfolio overview chart
-            $.get('/api/portfolio_overview', function(data) {
-                const chart = JSON.parse(data);
-                Plotly.newPlot('portfolio-overview', chart.data, chart.layout);
+            $.get('/api/holdings/all', function(data) {
+                // Add unit cost calculation to the data
+                data.forEach(holding => {
+                    holding.unit_cost = holding.quantity ? holding.cost_basis / holding.quantity : 0;
+                });
                 
-                // Extract asset types from chart data and update the filter dropdown
-                const assetTypes = chart.data[0].labels || [];
+                // Extract asset types and update the filter dropdown
+                const assetTypes = [...new Set(data.map(h => h.type))].sort();
                 const typeFilter = $('#type-filter');
                 typeFilter.empty().append('<option value="all">All Types</option>');
                 assetTypes.forEach(type => {
                     typeFilter.append(`<option value="${type}">${type}</option>`);
                 });
                 
-                // Add click event handler
-                document.getElementById('portfolio-overview').on('plotly_click', function(data) {
-                    const point = data.points[0];
-                    filterState.type = point.label;
-                    filterState.chartSelection = point.label;
-                    $('#type-filter').val(point.label);
-                    applyFilters();
-                });
+                // Update the portfolio overview chart with all data
+                updatePortfolioOverview(data);
             });
         }
 
