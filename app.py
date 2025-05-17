@@ -12,102 +12,121 @@ def load_and_process_data():
     input_dir = Path("input")
     csv_files = list(input_dir.glob("*.csv"))
     
-    print(f"Found {len(csv_files)} CSV files in input directory")
+    print(f"\nFound {len(csv_files)} CSV files in input directory:")
+    for f in csv_files:
+        print(f"  - {f}")
     
     all_positions = []
     account_totals = []
+    
+    # Define exact phrases to skip
+    skip_phrases = [
+        'Cash & Cash Investments',
+        'Pending Activity',
+        'Account Total',
+        'nan'
+    ]
     
     for csv_file in csv_files:
         print(f"\nProcessing file: {csv_file}")
         
         try:
-            # Try reading first few lines to check format
-            with open(csv_file, 'r') as f:
-                first_line = f.readline().strip()
+            # Check if this is the 652 file
+            is_652_file = '652' in str(csv_file)
             
-            if "Account Name" in first_line:  # Positions file format
-                df = pd.read_csv(csv_file)
-                print(f"Processing as positions file. Columns: {df.columns}")
-                
-                # First, get Account Total
-                total_rows = df[df['Description'].str.contains('Account Total', na=False)]
-                for _, row in total_rows.iterrows():
-                    try:
-                        total = {
-                            'symbol': 'TOTAL',
-                            'description': 'Account Total',
-                            'type': 'Account Total',
-                            'value': float(str(row['Current Value']).replace('$', '').replace(',', '')) if pd.notna(row['Current Value']) else 0.0,
-                            'cost_basis': float(str(row['Cost Basis Total']).replace('$', '').replace(',', '')) if pd.notna(row['Cost Basis Total']) else 0.0,
-                            'gain_loss': float(str(row.get('Gain/Loss Total', 0)).replace('$', '').replace(',', '')) if pd.notna(row.get('Gain/Loss Total')) else 0.0
-                        }
-                        account_totals.append(total)
-                        print(f"Found account total: {total}")
-                    except Exception as e:
-                        print(f"Error processing account total: {e}")
-                
-                # Then process individual positions
-                position_rows = df[~df['Description'].str.contains('Account Total', na=False)]
-                for _, row in position_rows.iterrows():
-                    try:
-                        if pd.notna(row['Symbol']):  # Include all positions, including cash
-                            position = {
-                                'symbol': str(row['Symbol']),
-                                'description': str(row.get('Description', '')),
-                                'type': str(row['Type']) if pd.notna(row['Type']) else 'Stock',
-                                'value': float(str(row['Current Value']).replace('$', '').replace(',', '')) if pd.notna(row['Current Value']) else 0.0,
-                                'cost_basis': float(str(row['Cost Basis Total']).replace('$', '').replace(',', '')) if pd.notna(row['Cost Basis Total']) else 0.0,
-                                'gain_loss': float(str(row.get('Gain/Loss Total', 0)).replace('$', '').replace(',', '')) if pd.notna(row.get('Gain/Loss Total')) else 0.0,
-                                'quantity': float(str(row['Quantity']).replace(',', '')) if pd.notna(row['Quantity']) else 0,
-                                'price': float(str(row['Last Price']).replace('$', '').replace(',', '')) if pd.notna(row['Last Price']) else 0.0
-                            }
-                            all_positions.append(position)
-                    except Exception as e:
-                        print(f"Error processing position row: {e}")
-            
-            else:  # Account file format
+            # Read the CSV file
+            if is_652_file:
+                # Skip the first 3 rows for 652 file
                 df = pd.read_csv(csv_file, skiprows=3)
-                print(f"Processing as account file. Columns: {df.columns}")
+            else:
+                df = pd.read_csv(csv_file)
+            
+            print(f"File columns: {df.columns.tolist()}")
+            print(f"Number of rows: {len(df)}")
+            
+            # Process each row
+            for _, row in df.iterrows():
+                try:
+                    # Skip rows without Symbol or with empty Symbol
+                    symbol = str(row.get('Symbol', '')).strip()
+                    if pd.isna(symbol) or symbol == '':
+                        continue
+                    
+                    # Get description for checking
+                    description = str(row.get('Description', row.get('Security Description', ''))).strip()
+                    
+                    # Skip if description exactly matches any of the skip phrases
+                    if symbol in skip_phrases:
+                        print(f"Skipping entry: {description}")
+                        continue
+                    
+                    # Extract and clean numeric values
+                    def clean_numeric(value):
+                        if pd.isna(value) or str(value).strip() in ['--', 'N/A', '', 'N/A%']:
+                            return 0.0
+                        return float(str(value).replace('$', '').replace(',', '').replace('%', '').strip())
+                    
+                    # Function to get value from multiple possible column names
+                    def get_value_from_columns(row, possible_columns, default=0):
+                        for col in possible_columns:
+                            if col in row and pd.notna(row[col]):
+                                return clean_numeric(row[col])
+                        return default
+                    
+                    # Define column mappings for different file formats
+                    if is_652_file:
+                        value_cols = ['Mkt Val (Market Value)']
+                        cost_basis_cols = ['Cost Basis']
+                        gain_loss_cols = ['Gain $ (Gain/Loss $)']
+                        quantity_cols = ['Qty (Quantity)']
+                        price_cols = ['Price']
+                    else:
+                        value_cols = ['Current Value', 'Mkt Val (Market Value)']
+                        cost_basis_cols = ['Cost Basis Total', 'Cost Basis']
+                        gain_loss_cols = ['Gain/Loss Total', 'Total Gain/Loss Dollar', 'Gain/Loss $']
+                        quantity_cols = ['Quantity', 'Qty (Quantity)']
+                        price_cols = ['Last Price', 'Price']
+                    
+                    # Create position dictionary
+                    position = {
+                        'symbol': symbol,
+                        'description': description,
+                        'type': str(row.get('Type', row.get('Security Type', 'Stock'))),
+                        'value': get_value_from_columns(row, value_cols),
+                        'cost_basis': get_value_from_columns(row, cost_basis_cols),
+                        'gain_loss': get_value_from_columns(row, gain_loss_cols)
+                    }
+                    
+                    # Add quantity and price
+                    position.update({
+                        'quantity': get_value_from_columns(row, quantity_cols),
+                        'price': get_value_from_columns(row, price_cols)
+                    })
+                    
+                    # Add to positions list
+                    all_positions.append(position)
+                    print(f"Added Position: {position['symbol']} - {position['description']} - Value: ${position['value']:,.2f} - Gain/Loss: ${position['gain_loss']:,.2f}")
                 
-                # Process all rows
-                for _, row in df.iterrows():
-                    try:
-                        if pd.notna(row['Symbol']):
-                            is_total = 'Account Total' in str(row.get('Security Description', ''))
-                            
-                            # Common data processing
-                            value_str = str(row['Mkt Val (Market Value)']).strip().replace('$', '').replace(',', '')
-                            cost_basis_str = str(row['Cost Basis']).strip().replace('$', '').replace(',', '')
-                            gain_loss_str = str(row.get('Gain/Loss', 0)).strip().replace('$', '').replace(',', '')
-                            
-                            position = {
-                                'symbol': 'TOTAL' if is_total else str(row['Symbol']),
-                                'description': 'Account Total' if is_total else str(row.get('Security Description', '')),
-                                'type': 'Account Total' if is_total else str(row['Security Type']),
-                                'value': float(value_str) if value_str not in ['--', 'N/A'] else 0.0,
-                                'cost_basis': float(cost_basis_str) if cost_basis_str not in ['--', 'N/A'] else 0.0,
-                                'gain_loss': float(gain_loss_str) if gain_loss_str not in ['--', 'N/A'] else 0.0
-                            }
-                            
-                            if not is_total:
-                                position.update({
-                                    'quantity': float(str(row['Qty (Quantity)']).strip().replace(',', '')) if pd.notna(row['Qty (Quantity)']) else 0,
-                                    'price': float(str(row['Price']).strip().replace('$', '').replace(',', '')) if pd.notna(row['Price']) else 0.0
-                                })
-                                all_positions.append(position)
-                            else:
-                                account_totals.append(position)
-                                
-                    except Exception as e:
-                        print(f"Error processing row: {e}")
+                except Exception as e:
+                    print(f"Error processing row: {e}")
+                    print(f"Row data: {row.to_dict()}")
         
         except Exception as e:
             print(f"Error processing file {csv_file}: {e}")
+            traceback.print_exc()
     
+    # Convert to DataFrames
     positions_df = pd.DataFrame(all_positions)
     account_totals_df = pd.DataFrame(account_totals)
     
-    print(f"\nProcessed {len(positions_df)} positions and {len(account_totals_df)} account totals")
+    print(f"\nProcessed data summary:")
+    print(f"Number of positions: {len(positions_df)}")
+    print(f"Number of account totals: {len(account_totals_df)}")
+    
+    if not positions_df.empty:
+        print("\nPositions DataFrame columns:", positions_df.columns.tolist())
+        print("\nSample of positions:")
+        print(positions_df[['symbol', 'description', 'value', 'gain_loss']].head().to_string())
     
     return positions_df, account_totals_df
 
@@ -246,64 +265,54 @@ def get_holdings():
     try:
         positions_df, account_totals_df = load_and_process_data()
         
-        # Debug prints
-        print("\nAccount Totals:")
-        print(account_totals_df.to_string())
-        
-        print("\nPositions DataFrame Shape:", positions_df.shape)
-        print("\nSample of Positions:")
-        if not positions_df.empty:
-            print(positions_df[['symbol', 'type', 'value', 'cost_basis', 'gain_loss']].head().to_string())
-        
+        print("\nPreparing holdings data...")
         holdings = []
         
-        # Add Account Total first
-        for _, row in account_totals_df.iterrows():
-            holding = {
-                'symbol': row['symbol'],
-                'description': row['description'],
-                'type': row['type'],
-                'quantity': None,
-                'price': None,
-                'value': float(row['value']),
-                'cost_basis': float(row['cost_basis']),
-                'gain_loss': float(row['gain_loss']),
-                'portfolio_percentage': 100.0
-            }
-            holdings.append(holding)
-            print(f"\nAccount Total added: {holding}")
-        
-        # Calculate percentages for individual positions using Account Total value
-        total_value = account_totals_df['value'].sum()
-        
-        # Then add individual positions
-        for _, row in positions_df.iterrows():
-            try:
-                value = float(row['value']) if pd.notna(row['value']) else 0.0
-                portfolio_percentage = (value / total_value * 100) if total_value > 0 else 0
-                
+        # First add Account Total
+        if not account_totals_df.empty:
+            for _, row in account_totals_df.iterrows():
                 holding = {
-                    'symbol': str(row['symbol']),
-                    'description': str(row['description']),
-                    'type': str(row['type']),
-                    'quantity': float(row['quantity']) if pd.notna(row['quantity']) else None,
-                    'price': float(row['price']) if pd.notna(row['price']) else None,
-                    'value': value,
-                    'cost_basis': float(row['cost_basis']) if pd.notna(row['cost_basis']) else 0.0,
-                    'gain_loss': float(row['gain_loss']) if pd.notna(row['gain_loss']) else 0.0,
-                    'portfolio_percentage': round(portfolio_percentage, 2)
+                    'symbol': row['symbol'],
+                    'description': row['description'],
+                    'type': row['type'],
+                    'value': float(row['value']),
+                    'cost_basis': float(row['cost_basis']),
+                    'gain_loss': float(row['gain_loss']),
+                    'portfolio_percentage': 100.0
                 }
                 holdings.append(holding)
-            except Exception as e:
-                print(f"Error processing individual holding: {e}")
-                continue
+                print(f"Added Account Total: {holding['symbol']} - Value: ${holding['value']:,.2f}")
+        
+        # Then add individual positions
+        if not positions_df.empty:
+            total_value = positions_df['value'].sum()
+            print(f"Total value for percentage calculation: ${total_value:,.2f}")
+            
+            for _, row in positions_df.iterrows():
+                try:
+                    value = float(row['value'])
+                    portfolio_percentage = (value / total_value * 100) if total_value > 0 else 0
+                    
+                    holding = {
+                        'symbol': str(row['symbol']),
+                        'description': str(row['description']),
+                        'type': str(row['type']),
+                        'quantity': float(row['quantity']) if 'quantity' in row else None,
+                        'price': float(row['price']) if 'price' in row else None,
+                        'value': value,
+                        'cost_basis': float(row['cost_basis']),
+                        'gain_loss': float(row['gain_loss']),
+                        'portfolio_percentage': round(portfolio_percentage, 2)
+                    }
+                    holdings.append(holding)
+                    print(f"Added Position: {holding['symbol']} - Value: ${holding['value']:,.2f} - {holding['portfolio_percentage']}%")
+                except Exception as e:
+                    print(f"Error processing position: {e}")
+                    continue
         
         print(f"\nTotal holdings to return: {len(holdings)}")
-        if holdings:
-            print("First holding:", holdings[0])
-            print("Last holding:", holdings[-1])
-        
         return jsonify(holdings)
+    
     except Exception as e:
         print(f"Error in get_holdings: {e}")
         traceback.print_exc()
@@ -312,37 +321,37 @@ def get_holdings():
 @app.route('/api/portfolio_summary')
 def get_portfolio_summary():
     try:
-        _, account_totals_df = load_and_process_data()
-        
-        # Debug prints
-        print("\nPortfolio Summary Calculation:")
-        print("Account Totals DataFrame:")
-        print(account_totals_df.to_string())
-        
-        # Use Account Total values directly
-        total_value = account_totals_df['value'].sum()
-        total_gain_loss = account_totals_df['gain_loss'].sum()
-        
-        print(f"Total Value from Account Total: ${total_value:,.2f}")
-        print(f"Total Gain/Loss from Account Total: ${total_gain_loss:,.2f}")
-        
-        # Calculate cash balance
         positions_df, _ = load_and_process_data()
-        cash_positions = positions_df[positions_df['symbol'].isin(['SPAXX**', 'FDRXX**'])]
-        cash_balance = cash_positions['value'].sum()
         
-        print("\nCash Positions:")
-        print(cash_positions[['symbol', 'value']].to_string())
-        print(f"Total Cash Balance: ${cash_balance:,.2f}")
+        print("\nCalculating Portfolio Summary:")
+        
+        # Calculate total portfolio value from all positions
+        total_value = positions_df['value'].sum()
+        print(f"Total Portfolio Value: ${total_value:,.2f}")
+        
+        # Calculate total gain/loss
+        total_gain_loss = positions_df['gain_loss'].sum()
+        print(f"Total Gain/Loss: ${total_gain_loss:,.2f}")
+        
+        # Calculate cash balance (if any cash positions exist)
+        cash_positions = positions_df[positions_df['type'].str.contains('Cash', case=False, na=False)]
+        cash_balance = cash_positions['value'].sum() if not cash_positions.empty else 0.0
+        print(f"Cash Balance: ${cash_balance:,.2f}")
+        
+        # Print all positions for debugging
+        print("\nAll positions:")
+        for _, row in positions_df.iterrows():
+            print(f"{row['symbol']}: Value=${row['value']:,.2f}, Gain/Loss=${row['gain_loss']:,.2f}")
         
         return jsonify({
             'total_value': float(total_value),
             'total_gain': float(total_gain_loss),
-            'day_change': 0.0,  # Placeholder
+            'day_change': 0.0,  # Placeholder for now
             'cash_balance': float(cash_balance)
         })
     except Exception as e:
         print(f"Error in get_portfolio_summary: {e}")
+        traceback.print_exc()
         return jsonify({
             'total_value': 0,
             'total_gain': 0,
