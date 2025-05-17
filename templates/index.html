@@ -25,6 +25,7 @@
         }
         .chart-container {
             min-height: 400px;
+            margin: 20px 0;
         }
         .summary-box {
             background-color: #f8f9fa;
@@ -43,14 +44,16 @@
         }
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            padding: 20px;
             background-color: #f5f5f5;
         }
         .container {
-            max-width: 1200px;
+            width: 100%;
+            max-width: none;
             margin: 0 auto;
             background-color: white;
-            padding: 20px;
+            padding: 20px 30px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
@@ -83,6 +86,101 @@
         .negative {
             color: #dc3545;
         }
+        .filter-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .filter-group {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 10px;
+        }
+        .filter-label {
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .active-filters {
+            margin-top: 15px;
+            padding: 10px 0;
+        }
+        .filter-tag {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 0 5px 5px 0;
+            background-color: #e9ecef;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+        .filter-tag .remove-filter {
+            margin-left: 5px;
+            cursor: pointer;
+            color: #666;
+        }
+        .filter-tag .remove-filter:hover {
+            color: #dc3545;
+        }
+        .search-input {
+            padding: 6px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .clickable {
+            cursor: pointer;
+        }
+        .details-row {
+            background-color: #f8f9fa;
+            font-size: 0.95em;
+        }
+        .details-row td {
+            padding-left: 2rem;
+        }
+        .details-table {
+            margin: 0;
+            width: 100%;
+        }
+        .details-table th {
+            background-color: #e9ecef;
+            font-size: 0.9em;
+            padding: 0.5rem;
+        }
+        .details-table td {
+            padding: 0.5rem;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #e9ecef;
+        }
+        .expandable-row {
+            transition: background-color 0.2s;
+        }
+        .expandable-row:hover {
+            background-color: #f8f9fa;
+        }
+        .selected-row {
+            background-color: #e9ecef;
+        }
+        .sort-header {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px !important;
+        }
+        .sort-header:after {
+            content: '⇕';
+            position: absolute;
+            right: 5px;
+            color: #999;
+        }
+        .sort-header.sort-asc:after {
+            content: '↑';
+            color: #333;
+        }
+        .sort-header.sort-desc:after {
+            content: '↓';
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -105,6 +203,33 @@
             </div>
         </div>
 
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <label class="filter-label" for="type-filter">Asset Type:</label>
+                <select id="type-filter" class="form-select" style="width: auto; display: inline-block;">
+                    <option value="all">All Types</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="account-filter">Account:</label>
+                <select id="account-filter" class="form-select" style="width: auto; display: inline-block;">
+                    <option value="all">All Accounts</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="symbol-filter">Symbol:</label>
+                <input type="text" id="symbol-filter" class="search-input" placeholder="Enter symbol...">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="description-filter">Description:</label>
+                <input type="text" id="description-filter" class="search-input" placeholder="Search description...">
+            </div>
+            <div class="active-filters">
+                <div id="active-filter-tags"></div>
+            </div>
+        </div>
+
         <!-- Charts Section -->
         <div class="chart-container">
             <div id="portfolio-overview"></div>
@@ -115,15 +240,14 @@
         <table id="holdings-table">
             <thead>
                 <tr>
-                    <th>Symbol</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th class="number">Quantity</th>
-                    <th class="number">Price</th>
-                    <th class="number">Value</th>
-                    <th class="number">Cost Basis</th>
-                    <th class="number">Gain/Loss</th>
-                    <th class="number">% of Portfolio</th>
+                    <th class="sort-header" data-sort="symbol">Symbol</th>
+                    <th class="sort-header" data-sort="description">Description</th>
+                    <th class="sort-header number" data-sort="quantity">Quantity</th>
+                    <th class="sort-header number" data-sort="price">Price</th>
+                    <th class="sort-header number" data-sort="value">Value</th>
+                    <th class="sort-header number" data-sort="cost_basis">Cost Basis</th>
+                    <th class="sort-header number" data-sort="gain_loss">Gain/Loss</th>
+                    <th class="sort-header number" data-sort="portfolio_percentage">% of Portfolio</th>
                 </tr>
             </thead>
             <tbody>
@@ -150,19 +274,179 @@
             }).format(value / 100);
         }
 
-        // Load and display holdings
-        function loadHoldings(assetType = 'all') {
-            $.get(`/api/holdings/${assetType}`, function(data) {
+        // Toggle symbol details
+        function toggleSymbolDetails(element, symbol) {
+            const row = $(element);
+            const existingDetails = row.next('.details-row');
+            
+            // Remove any other expanded details and selected rows
+            $('.details-row').remove();
+            $('.selected-row').removeClass('selected-row');
+            
+            // If this row wasn't the one that was expanded, expand it
+            if (existingDetails.length === 0) {
+                row.addClass('selected-row');
+                
+                $.get(`/api/symbol_details/${symbol}`, function(data) {
+                    const detailsHtml = `
+                        <tr class="details-row">
+                            <td colspan="10">
+                                <table class="details-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Account</th>
+                                            <th class="number">Quantity</th>
+                                            <th class="number">Price</th>
+                                            <th class="number">Value</th>
+                                            <th class="number">Cost Basis</th>
+                                            <th class="number">Gain/Loss</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.map(position => {
+                                            const gainLossClass = position.gain_loss >= 0 ? 'positive' : 'negative';
+                                            const rowClass = position.account === 'Total' ? 'total-row' : '';
+                                            return `
+                                                <tr class="${rowClass}">
+                                                    <td>${position.account}</td>
+                                                    <td class="number">${position.quantity.toLocaleString()}</td>
+                                                    <td class="number">${formatCurrency(position.price)}</td>
+                                                    <td class="number">${formatCurrency(position.value)}</td>
+                                                    <td class="number">${formatCurrency(position.cost_basis)}</td>
+                                                    <td class="number ${gainLossClass}">${formatCurrency(position.gain_loss)}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    `;
+                    row.after(detailsHtml);
+                });
+            }
+        }
+
+        // Add sorting functionality
+        let currentSort = {
+            column: 'value',
+            direction: 'desc'
+        };
+
+        function sortHoldings(holdings, column, direction) {
+            return holdings.sort((a, b) => {
+                let aValue = a[column];
+                let bValue = b[column];
+                
+                // Handle numeric values
+                if (column === 'quantity' || column === 'price' || column === 'value' || 
+                    column === 'cost_basis' || column === 'gain_loss' || column === 'portfolio_percentage') {
+                    aValue = parseFloat(aValue) || 0;
+                    bValue = parseFloat(bValue) || 0;
+                } else {
+                    // For text values, convert to uppercase for case-insensitive sorting
+                    aValue = String(aValue).toUpperCase();
+                    bValue = String(bValue).toUpperCase();
+                }
+                
+                if (direction === 'asc') {
+                    return aValue > bValue ? 1 : -1;
+                } else {
+                    return aValue < bValue ? 1 : -1;
+                }
+            });
+        }
+
+        // Filter state management
+        let filterState = {
+            type: 'all',
+            account: 'all',
+            symbol: '',
+            description: '',
+            chartSelection: null
+        };
+
+        // Update active filter tags
+        function updateActiveFilterTags() {
+            const tagsContainer = $('#active-filter-tags');
+            tagsContainer.empty();
+            
+            const addTag = (label, value, filterKey) => {
+                if (value && value !== 'all') {
+                    tagsContainer.append(`
+                        <span class="filter-tag">
+                            ${label}: ${value}
+                            <span class="remove-filter" onclick="removeFilter('${filterKey}')">&times;</span>
+                        </span>
+                    `);
+                }
+            };
+
+            addTag('Type', filterState.type, 'type');
+            addTag('Account', filterState.account, 'account');
+            addTag('Symbol', filterState.symbol, 'symbol');
+            addTag('Description', filterState.description, 'description');
+            if (filterState.chartSelection) {
+                addTag('Chart Selection', filterState.chartSelection, 'chartSelection');
+            }
+        }
+
+        // Remove filter
+        function removeFilter(filterKey) {
+            switch (filterKey) {
+                case 'type':
+                    $('#type-filter').val('all');
+                    filterState.type = 'all';
+                    break;
+                case 'account':
+                    $('#account-filter').val('all');
+                    filterState.account = 'all';
+                    break;
+                case 'symbol':
+                    $('#symbol-filter').val('');
+                    filterState.symbol = '';
+                    break;
+                case 'description':
+                    $('#description-filter').val('');
+                    filterState.description = '';
+                    break;
+                case 'chartSelection':
+                    filterState.chartSelection = null;
+                    break;
+            }
+            applyFilters();
+        }
+
+        // Apply all filters
+        function applyFilters() {
+            updateActiveFilterTags();
+            loadHoldings();
+        }
+
+        // Load and display holdings with filtering
+        function loadHoldings() {
+            $.get('/api/holdings/all', function(data) {
+                // Apply filters
+                let filteredData = data.filter(holding => {
+                    if (filterState.type !== 'all' && holding.type !== filterState.type) return false;
+                    if (filterState.account !== 'all' && holding.account !== filterState.account) return false;
+                    if (filterState.symbol && !holding.symbol.toLowerCase().includes(filterState.symbol.toLowerCase())) return false;
+                    if (filterState.description && !holding.description.toLowerCase().includes(filterState.description.toLowerCase())) return false;
+                    return true;
+                });
+
+                // Sort the data
+                filteredData = sortHoldings(filteredData, currentSort.column, currentSort.direction);
+                
                 const tbody = $('#holdings-table tbody');
                 tbody.empty();
 
-                data.forEach(holding => {
+                filteredData.forEach(holding => {
                     const gainLossClass = holding.gain_loss >= 0 ? 'positive' : 'negative';
                     tbody.append(`
-                        <tr>
+                        <tr class="expandable-row clickable" onclick="toggleSymbolDetails(this, '${holding.symbol}')">
                             <td>${holding.symbol}</td>
                             <td>${holding.description}</td>
-                            <td>${holding.type}</td>
                             <td class="number">${holding.quantity ? holding.quantity.toLocaleString() : '-'}</td>
                             <td class="number">${holding.price ? formatCurrency(holding.price) : '-'}</td>
                             <td class="number">${formatCurrency(holding.value)}</td>
@@ -192,11 +476,31 @@
                 const chart = JSON.parse(data);
                 Plotly.newPlot('portfolio-overview', chart.data, chart.layout);
                 
+                // Extract asset types from chart data and update the filter dropdown
+                const assetTypes = chart.data[0].labels || [];
+                const typeFilter = $('#type-filter');
+                typeFilter.empty().append('<option value="all">All Types</option>');
+                assetTypes.forEach(type => {
+                    typeFilter.append(`<option value="${type}">${type}</option>`);
+                });
+                
                 // Add click event handler
                 document.getElementById('portfolio-overview').on('plotly_click', function(data) {
                     const point = data.points[0];
-                    const assetType = point.label;
-                    loadHoldings(assetType);
+                    filterState.type = point.label;
+                    filterState.chartSelection = point.label;
+                    $('#type-filter').val(point.label);
+                    applyFilters();
+                });
+            });
+        }
+
+        // Load accounts for filter
+        function loadAccounts() {
+            $.get('/api/accounts', function(accounts) {
+                const accountFilter = $('#account-filter');
+                accounts.forEach(account => {
+                    accountFilter.append(`<option value="${account}">${account}</option>`);
                 });
             });
         }
@@ -205,7 +509,43 @@
         $(document).ready(function() {
             loadSummary();
             loadCharts();
+            loadAccounts();
             loadHoldings();
+
+            // Add event listeners for filters
+            $('#type-filter').change(function() {
+                filterState.type = $(this).val();
+                applyFilters();
+            });
+
+            $('#account-filter').change(function() {
+                filterState.account = $(this).val();
+                applyFilters();
+            });
+
+            $('#symbol-filter').on('input', function() {
+                filterState.symbol = $(this).val();
+                applyFilters();
+            });
+
+            $('#description-filter').on('input', function() {
+                filterState.description = $(this).val();
+                applyFilters();
+            });
+
+            // Add event listeners for sorting
+            $('.sort-header').click(function() {
+                const column = $(this).data('sort');
+                if (currentSort.column === column) {
+                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort.column = column;
+                    currentSort.direction = 'asc';
+                }
+                $('.sort-header').removeClass('sort-asc sort-desc');
+                $(this).addClass(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                loadHoldings();
+            });
         });
     </script>
 </body>

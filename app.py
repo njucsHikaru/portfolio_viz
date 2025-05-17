@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from pathlib import Path
 import traceback
 
@@ -30,8 +30,8 @@ def load_and_process_data():
     csv_files = list(input_dir.glob("*.csv"))
     
     print(f"\nFound {len(csv_files)} CSV files in input directory:")
-    for f in csv_files:
-        print(f"  - {f}")
+    for i, f in enumerate(csv_files, 1):
+        print(f"  - Acct{i}: {f}")
     
     all_positions = []
     account_totals = []
@@ -44,8 +44,9 @@ def load_and_process_data():
         'nan'
     ]
     
-    for csv_file in csv_files:
-        print(f"\nProcessing file: {csv_file}")
+    for account_num, csv_file in enumerate(csv_files, 1):
+        account_name = f"Acct{account_num}"
+        print(f"\nProcessing file for {account_name}: {csv_file}")
         
         try:
             # Check if this is the 652 file
@@ -116,12 +117,13 @@ def load_and_process_data():
                         'cost_basis': get_value_from_columns(row, cost_basis_cols),
                         'gain_loss': get_value_from_columns(row, gain_loss_cols),
                         'quantity': get_value_from_columns(row, quantity_cols),
-                        'price': get_value_from_columns(row, price_cols)
+                        'price': get_value_from_columns(row, price_cols),
+                        'account': account_name  # Add account information
                     }
                     
                     # Add to positions list
                     all_positions.append(position)
-                    print(f"Added Position: {position['symbol']} - {position['description']} - Value: ${position['value']:,.2f} - Gain/Loss: ${position['gain_loss']:,.2f}")
+                    print(f"Added Position: {position['symbol']} - {position['description']} - Account: {position['account']} - Value: ${position['value']:,.2f}")
                 
                 except Exception as e:
                     print(f"Error processing row: {e}")
@@ -133,6 +135,53 @@ def load_and_process_data():
     
     # Convert to DataFrame
     positions_df = pd.DataFrame(all_positions)
+    
+    # Print the data before merging
+    print("\nBefore merging - number of positions:", len(positions_df))
+    
+    # Group by account and symbol to identify duplicates
+    duplicates = positions_df.groupby(['account', 'symbol']).size()
+    duplicates = duplicates[duplicates > 1]
+    if not duplicates.empty:
+        print("\nFound duplicate positions to merge:")
+        for (account, symbol), count in duplicates.items():
+            print(f"{account} - {symbol}: {count} positions")
+    
+    # Merge positions with the same symbol within the same account
+    merged_positions = []
+    for (account, symbol), group in positions_df.groupby(['account', 'symbol']):
+        if len(group) > 1:
+            # Sum numeric values
+            total_value = group['value'].sum()
+            total_cost_basis = group['cost_basis'].sum()
+            total_gain_loss = group['gain_loss'].sum()
+            total_quantity = group['quantity'].sum()
+            
+            # Use the first row for non-numeric fields
+            merged_position = {
+                'account': account,
+                'symbol': symbol,
+                'description': group.iloc[0]['description'],
+                'type': group.iloc[0]['type'],
+                'price': group.iloc[0]['price'],  # Use the latest price
+                'value': total_value,
+                'cost_basis': total_cost_basis,
+                'gain_loss': total_gain_loss,
+                'quantity': total_quantity
+            }
+            merged_positions.append(merged_position)
+            print(f"\nMerged positions for {account} - {symbol}:")
+            print(f"Total Value: ${total_value:,.2f}")
+            print(f"Total Quantity: {total_quantity:,.2f}")
+        else:
+            # Single position, no need to merge
+            merged_positions.append(group.iloc[0].to_dict())
+    
+    # Convert merged positions back to DataFrame
+    positions_df = pd.DataFrame(merged_positions)
+    
+    # Print the data after merging
+    print("\nAfter merging - number of positions:", len(positions_df))
     
     # Standardize types based on symbols and descriptions
     def determine_asset_type(row):
@@ -176,7 +225,7 @@ def load_and_process_data():
     if not positions_df.empty:
         print("\nPositions DataFrame columns:", positions_df.columns.tolist())
         print("\nSample of positions:")
-        print(positions_df[['symbol', 'description', 'value', 'gain_loss']].head().to_string())
+        print(positions_df[['symbol', 'description', 'account', 'value', 'gain_loss']].head().to_string())
         print("\nUnique types after processing:", positions_df['type'].unique())
     
     return positions_df, pd.DataFrame(account_totals)
@@ -287,16 +336,118 @@ def index():
 def portfolio_overview():
     return jsonify(create_portfolio_overview())
 
+@app.route('/api/accounts')
+def get_accounts():
+    try:
+        positions_df, _ = load_and_process_data()
+        accounts = sorted(positions_df['account'].unique().tolist())
+        return jsonify(accounts)
+    except Exception as e:
+        print(f"Error in get_accounts: {e}")
+        traceback.print_exc()
+        return jsonify([])
+
+@app.route('/api/symbol_details/<symbol>')
+def get_symbol_details(symbol):
+    try:
+        positions_df, _ = load_and_process_data()
+        
+        # Filter for the specific symbol
+        symbol_positions = positions_df[positions_df['symbol'] == symbol]
+        
+        if symbol_positions.empty:
+            return jsonify([])
+        
+        # Group by account to get details from each account
+        details = []
+        for account, group in symbol_positions.groupby('account'):
+            position = {
+                'account': account,
+                'symbol': symbol,
+                'description': group.iloc[0]['description'],
+                'type': group.iloc[0]['type'],
+                'quantity': float(group['quantity'].sum()),
+                'price': float(group.iloc[0]['price']),
+                'value': float(group['value'].sum()),
+                'cost_basis': float(group['cost_basis'].sum()),
+                'gain_loss': float(group['gain_loss'].sum())
+            }
+            details.append(position)
+        
+        # Add total row
+        total = {
+            'account': 'Total',
+            'symbol': symbol,
+            'description': symbol_positions.iloc[0]['description'],
+            'type': symbol_positions.iloc[0]['type'],
+            'quantity': float(symbol_positions['quantity'].sum()),
+            'price': float(symbol_positions.iloc[0]['price']),
+            'value': float(symbol_positions['value'].sum()),
+            'cost_basis': float(symbol_positions['cost_basis'].sum()),
+            'gain_loss': float(symbol_positions['gain_loss'].sum())
+        }
+        details.append(total)
+        
+        return jsonify(details)
+    except Exception as e:
+        print(f"Error in get_symbol_details: {e}")
+        traceback.print_exc()
+        return jsonify([])
+
 @app.route('/api/holdings/<asset_type>')
 def get_holdings_by_type(asset_type):
     try:
         positions_df, _ = load_and_process_data()
         
-        # Filter positions by type
+        # Get account filter from query parameter
+        account_filter = request.args.get('account', 'all')
+        
+        # Print all unique types before filtering
+        print("\nAll unique types in positions_df:")
+        print(positions_df['type'].unique())
+        
+        # Apply type filter first
         if asset_type != 'all':
             positions_df = positions_df[positions_df['type'] == asset_type]
+            print(f"\nFiltered for asset_type: {asset_type}")
+            print(f"Number of positions after type filtering: {len(positions_df)}")
         
-        print(f"\nFiltering holdings for type: {asset_type}")
+        # Apply account filter if specified
+        if account_filter != 'all':
+            positions_df = positions_df[positions_df['account'] == account_filter]
+            print(f"\nFiltered for account: {account_filter}")
+            print(f"Number of positions after account filtering: {len(positions_df)}")
+        
+        print(f"\nFiltering holdings for type: {asset_type} and account: {account_filter}")
+        
+        # If showing all accounts, merge positions with the same symbol
+        if account_filter == 'all':
+            # Group by symbol
+            merged_positions = []
+            for symbol, group in positions_df.groupby('symbol'):
+                accounts = sorted(group['account'].unique())
+                total_value = group['value'].sum()
+                total_cost_basis = group['cost_basis'].sum()
+                total_gain_loss = group['gain_loss'].sum()
+                total_quantity = group['quantity'].sum()
+                
+                merged_position = {
+                    'symbol': symbol,
+                    'description': group.iloc[0]['description'],
+                    'type': group.iloc[0]['type'],
+                    'accounts': accounts,  # List of accounts that hold this symbol
+                    'account': ', '.join(accounts),  # Display string of accounts
+                    'quantity': total_quantity,
+                    'price': float(group.iloc[0]['price']),
+                    'value': total_value,
+                    'cost_basis': total_cost_basis,
+                    'gain_loss': total_gain_loss
+                }
+                merged_positions.append(merged_position)
+            
+            # Convert back to DataFrame
+            positions_df = pd.DataFrame(merged_positions)
+        
         print(f"Found {len(positions_df)} positions")
         
         holdings = []
@@ -311,22 +462,21 @@ def get_holdings_by_type(asset_type):
                     'symbol': str(row['symbol']),
                     'description': str(row['description']),
                     'type': str(row['type']),
+                    'account': str(row['account']),
                     'quantity': float(row['quantity']) if 'quantity' in row else None,
                     'price': float(row['price']) if 'price' in row else None,
                     'value': value,
                     'cost_basis': float(row['cost_basis']),
                     'gain_loss': float(row['gain_loss']),
-                    'portfolio_percentage': round(portfolio_percentage, 2),
-                    'asset_type': str(row['type'])
+                    'portfolio_percentage': round(portfolio_percentage, 2)
                 }
                 holdings.append(holding)
-                print(f"Added Position: {holding['symbol']} - Value: ${holding['value']:,.2f}")
+                print(f"Added Position: {holding['symbol']} - Type: {holding['type']} - Account: {holding['account']} - Value: ${holding['value']:,.2f}")
             except Exception as e:
                 print(f"Error processing position: {e}")
                 continue
         
         return jsonify(holdings)
-    
     except Exception as e:
         print(f"Error in get_holdings_by_type: {e}")
         traceback.print_exc()
