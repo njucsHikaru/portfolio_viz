@@ -1,0 +1,42 @@
+﻿Account Number,Account Name,Symbol,Description,Quantity,Last Price,Last Price Change,Current Value,Today's Gain/Loss Dollar,Today's Gain/Loss Percent,Total Gain/Loss Dollar,Total Gain/Loss Percent,Percent Of Account,Cost Basis Total,Average Cost Basis,Type
+Z21685646,Individual,SPAXX**,HELD IN MONEY MARKET,,,,$0.54,,,,,100.00%,,,Cash
+238664877,ROTH IRA,SPAXX**,HELD IN MONEY MARKET,,,,$6184.33,,,,,42.54%,,,Cash
+238664877,ROTH IRA,NVDA,NVIDIA CORPORATION COM,10,$135.40,+$0.57,$1354.00,+$5.70,+0.42%,+$393.70,+40.99%,9.31%,$960.30,$96.03,Cash
+238664877,ROTH IRA,Pending Activity,,,,,$7000.00,,,,,,,,
+259168329,Traditional IRA,SPAXX**,HELD IN MONEY MARKET,,,,$7000.00,,,,,--,,,Cash
+259168329,Traditional IRA,Pending Activity,,,,,-$7000.00,,,,,,,,
+11355,META PLATFORMS,59101K851,VANGUARD TARGET 2060,296.762,$126.42,+$0.68,$37516.79,$0.00,0.00%,+$9114.03,+32.09%,33.48%,$28402.76,$95.71,
+11355,META PLATFORMS,59101K802,VANGUARD TARGET 2040,258.691,$122.66,+$0.64,$31730.91,$0.00,0.00%,+$7053.40,+28.58%,28.32%,$24677.51,$95.39,
+11355,META PLATFORMS,59101K869,VANGUARD TARGET 2055,338.82,$126.36,+$0.68,$42813.30,$0.00,0.00%,+$4208.52,+10.90%,38.21%,$38604.78,$113.94,
+11355,META PLATFORMS,,BROKERAGELINK,178361.89,$1.00,$0.00,$178361.89,$0.00,0.00%,$0.00,0.00%,--,$178361.89,$1.00,
+652291818,BrokerageLink,FDRXX**,HELD IN MONEY MARKET,,,,$12889.02,,,,,16.06%,,,Cash
+652291818,BrokerageLink,VOO,VANGUARD INDEX FUNDS S&P 500 ETF USD,75.694,$546.26,+$3.50,$41348.60,+$264.92,+0.64%,+$4307.88,+11.63%,51.52%,$37040.72,$489.35,Cash
+652291818,BrokerageLink,GOOG,ALPHABET INC CAP STK CL C,43.189,$167.43,+$2.03,$7231.13,+$87.67,+1.22%,+$883.44,+13.91%,9.01%,$6347.69,$146.97,Cash
+652291818,BrokerageLink,QQQ,INVESCO QQQ TR UNIT SER 1,17.027,$521.51,+$2.26,$8879.75,+$38.48,+0.43%,+$538.30,+6.45%,11.06%,$8341.45,$489.90,Cash
+652291818,BrokerageLink,IBIT,ISHARES BITCOIN TRUST ETF,15,$59.20,+$0.53,$888.00,+$7.95,+0.90%,+$314.73,+54.90%,1.11%,$573.27,$38.22,Cash
+652291818,BrokerageLink,MSFT,MICROSOFT CORP,2,$454.27,+$1.14,$908.54,+$2.28,+0.25%,+$148.54,+19.54%,1.13%,$760.00,$380.00,Cash
+652291818,BrokerageLink,TLT,ISHARES TR 20 YR TR BD ETF,94.044,$86.30,+$0.23,$8115.99,+$21.63,+0.26%,-$151.11,-1.83%,10.11%,$8267.10,$87.91,Cash
+652291819,BrokerageLink Roth,FDRXX**,HELD IN MONEY MARKET,,,,$33729.94,,,,,34.12%,,,Cash
+652291819,BrokerageLink Roth,NVDA,NVIDIA CORPORATION COM,78.012,$135.40,+$0.57,$10562.82,+$44.46,+0.42%,+$1372.93,+14.93%,10.68%,$9189.89,$117.80,Cash
+652291819,BrokerageLink Roth,MSFT,MICROSOFT CORP,20.048,$454.27,+$1.14,$9107.20,+$22.85,+0.25%,+$1351.15,+17.42%,9.21%,$7756.05,$386.87,Cash
+652291819,BrokerageLink Roth,AMZN,AMAZON.COM INC,40,$205.59,+$0.42,$8223.60,+$16.80,+0.20%,+$800.93,+10.79%,8.32%,$7422.67,$185.57,Cash
+652291819,BrokerageLink Roth,ASML,ASML HOLDING NV EUR0.09 NY REGISTRY SHS 2012,10.043,$748.10,-$10.26,$7513.16,-$103.05,-1.36%,+$791.13,+11.76%,7.60%,$6722.03,$669.32,Cash
+652291819,BrokerageLink Roth,UBER,UBER TECHNOLOGIES INC COM,30,$91.79,+$1.63,$2753.70,+$48.90,+1.80%,+$720.74,+35.45%,2.79%,$2032.96,$67.77,Cash
+652291819,BrokerageLink Roth,VOO,VANGUARD INDEX FUNDS S&P 500 ETF USD,8.094,$546.26,+$3.50,$4421.42,+$28.32,+0.64%,+$509.57,+13.02%,4.47%,$3911.85,$483.30,Cash
+652291819,BrokerageLink Roth,KO,COCA-COLA CO,53.377,$72.00,+$0.39,$3843.14,+$20.81,+0.54%,+$508.71,+15.25%,3.89%,$3334.43,$62.47,Cash
+652291819,BrokerageLink Roth,AAPL,APPLE INC,10.071,$211.26,-$0.19,$2127.59,-$1.92,-0.09%,+$430.36,+25.35%,2.15%,$1697.23,$168.53,Cash
+652291819,BrokerageLink Roth,GOOG,ALPHABET INC CAP STK CL C,17.026,$167.43,+$2.03,$2850.66,+$34.56,+1.22%,+$239.27,+9.16%,2.88%,$2611.39,$153.38,Cash
+652291819,BrokerageLink Roth,MCD,MCDONALD S CORP,7.066,$318.61,+$4.13,$2251.29,+$29.18,+1.31%,+$236.00,+11.71%,2.28%,$2015.29,$285.21,Cash
+652291819,BrokerageLink Roth,U,UNITY SOFTWARE INC COM,15,$22.81,+$1.59,$342.15,+$23.85,+7.49%,+$106.20,+45.00%,0.35%,$235.95,$15.73,Cash
+652291819,BrokerageLink Roth,BILI,BILIBILI INC SPON ADS REP 1 ORD CL Z,20,$18.93,+$1.19,$378.60,+$23.80,+6.70%,+$84.20,+28.60%,0.38%,$294.40,$14.72,Cash
+652291819,BrokerageLink Roth,QQQ,INVESCO QQQ TR UNIT SER 1,2.003,$521.51,+$2.26,$1044.58,+$4.52,+0.43%,+$63.28,+6.44%,1.06%,$981.30,$489.92,Cash
+652291819,BrokerageLink Roth,GOOGL,ALPHABET INC CAP STK CL A,15.006,$166.19,+$2.23,$2493.84,+$33.46,+1.36%,+$16.38,+0.66%,2.52%,$2477.46,$165.10,Cash
+652291819,BrokerageLink Roth,TLT,ISHARES TR 20 YR TR BD ETF,15.729,$86.30,+$0.23,$1357.41,+$3.61,+0.26%,-$11.14,-0.82%,1.37%,$1368.55,$87.01,Cash
+652291819,BrokerageLink Roth,AMD,ADVANCED MICRO DEVICES INC,50,$117.17,+$2.18,$5858.50,+$109.00,+1.89%,-$114.24,-1.92%,5.93%,$5972.74,$119.45,Cash
+652291819,BrokerageLink Roth,FFAI,FARADAY FUTURE INTLGT ELEC INC COM NEW CL A,3,$1.15,+$0.01,$3.45,+$0.03,+0.87%,-$367.45,-99.07%,0.00%,$370.90,$123.63,Cash
+
+"The data and information in this spreadsheet is provided to you solely for your use and is not for distribution. The spreadsheet is provided for informational purposes only, and is not intended to provide advice, nor should it be construed as an offer to sell, a solicitation of an offer to buy or a recommendation for any security by Fidelity or any third party. Data and information shown is based on information known to Fidelity as of the date it was exported and is subject to change. It should not be used in place of your account statements or trade confirmations and is not intended for tax reporting purposes. For more information on the data included in this spreadsheet, including any limitations thereof, go to Fidelity.com."
+
+"Brokerage services are provided by Fidelity Brokerage Services LLC (FBS), 900 Salem Street, Smithfield, RI 02917. Custody and other services provided by National Financial Services LLC (NFS). Both are Fidelity Investment companies and members SIPC, NYSE. Neither FBS nor NFS offer crypto as a direct investment nor provide trading or custody services for such assets."
+
+"Date downloaded May-16-2025 10:26 p.m ET"
