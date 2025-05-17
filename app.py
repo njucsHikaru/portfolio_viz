@@ -306,6 +306,24 @@ def load_and_process_data():
 def create_portfolio_overview():
     df = load_and_process_data()[0]
     
+    # Calculate total gain/loss
+    total_gain_loss = df['gain_loss'].sum()
+    print(f"\nTotal Gain/Loss: ${total_gain_loss:,.2f}")  # Debug print
+    
+    gain_loss_color = '#22c55e' if total_gain_loss >= 0 else '#ef4444'  # Bright green if positive, bright red if negative
+    gain_loss_sign = '+' if total_gain_loss >= 0 else ''
+    gain_loss_text = f"{gain_loss_sign}${abs(total_gain_loss):,.0f}"
+    print(f"Formatted Gain/Loss Text: {gain_loss_text}")  # Debug print
+    
+    # Define colors for each asset type
+    type_colors = {
+        'Stocks': '#00b894',    # Teal
+        'ETFs': '#0984e3',      # Blue
+        'Mutual Funds': '#6c5ce7', # Purple
+        'Bonds': '#fdcb6e',     # Yellow
+        'Cash': '#a8e6cf'       # Mint
+    }
+    
     # Calculate total portfolio value by type
     portfolio_by_type = df.groupby('type').agg({
         'value': 'sum',
@@ -318,65 +336,85 @@ def create_portfolio_overview():
     total_value = portfolio_by_type['value'].sum()
     portfolio_by_type['percentage'] = (portfolio_by_type['value'] / total_value * 100).round(2)
     
-    print("\nPortfolio breakdown by type:")
-    for _, row in portfolio_by_type.iterrows():
-        print(f"{row['type']}: ${row['value']:,.2f} ({row['percentage']}%), {row['symbol']} holdings")
-    
     # Create figure with subplots
     fig = go.Figure()
-    
-    # Print detailed pie chart data for debugging
-    print("\nDetailed Pie Chart Data:")
-    print("Total Portfolio Value:", f"${total_value:,.2f}")
-    print("\nBreakdown by Type:")
-    for _, row in portfolio_by_type.iterrows():
-        print(f"{row['type']}:")
-        print(f"  Value: ${row['value']:,.2f}")
-        print(f"  Percentage: {row['percentage']:.2f}%")
-        print(f"  Number of holdings: {row['symbol']}")
-        print("---")
     
     # Add pie chart to the left side
     fig.add_trace(go.Pie(
         values=portfolio_by_type['value'],
         labels=portfolio_by_type['type'],
-        domain={'x': [0, 0.5], 'y': [0, 1]},
-        textposition='inside',
-        texttemplate='%{label}<br>%{percent:.1f}%',
+        domain={'x': [0.02, 0.45], 'y': [0, 0.95]},
+        textposition='none',
         hovertemplate='<b>%{label}</b><br>' +
-                     'Value: $%{value:,.2f}<br>' +
-                     'Allocation: %{percent:.1f}%<br>' +
+                     'Value: $%{value:,.0f}<br>' +
+                     'Allocation: %{percent}<br>' +
                      '<extra></extra>',
-        textinfo='label+percent',
         direction='clockwise',
-        sort=False
+        sort=False,
+        marker=dict(
+            colors=[type_colors.get(t, '#95a5a6') for t in portfolio_by_type['type']]
+        ),
+        showlegend=False
     ))
     
-    # Add text annotations for the total and each asset type
+    # Add annotations
     annotations = []
     
     # Add total portfolio value at the top
     annotations.append(dict(
-        x=0.75,  # Position in right half
-        y=0.95,  # Near top
-        text=f"<b>Total Portfolio Value:</b><br>${total_value:,.2f}",
+        x=0.73,
+        y=0.95,
+        text=f"<b>Total Portfolio Value</b><br>${total_value:,.0f}",
         showarrow=False,
         align='center',
         xanchor='center',
         yanchor='top',
-        font=dict(size=14)
+        font=dict(size=16)  # Increased font size
+    ))
+    
+    # Add total gain/loss below total value
+    annotations.append(dict(
+        x=0.73,
+        y=0.87,  # Adjusted position to be closer to total value
+        text=f"<b>Total Gain/Loss</b><br><span style='color: {gain_loss_color}; font-weight: bold'>{gain_loss_text}</span>",
+        showarrow=False,
+        align='center',
+        xanchor='center',
+        yanchor='top',
+        font=dict(size=14),
+        bgcolor='rgba(255, 255, 255, 0)'  # Transparent background
     ))
     
     # Add individual asset type details
     num_types = len(portfolio_by_type)
-    spacing = 0.8 / (num_types + 1)  # Distribute entries evenly
+    spacing = 0.65 / (num_types + 1)  # Further reduced spacing
     
     for i, (_, row) in enumerate(portfolio_by_type.iterrows()):
-        y_pos = 0.8 - (i + 1) * spacing  # Start below total value
+        y_pos = 0.60 - (i + 1) * spacing  # Adjusted starting position lower to make room for gain/loss
+        value_text = f"${row['value']:,.0f}"
+        percent_text = f"{row['percentage']:.1f}%"
+        color = type_colors.get(row['type'], '#95a5a6')
+        
+        # Add color square
         annotations.append(dict(
-            x=0.75,  # Position in right half
+            x=0.55,
             y=y_pos,
-            text=f"<b>{row['type']}</b><br>${row['value']:,.2f} ({row['percentage']:.1f}%)",
+            text='■',
+            showarrow=False,
+            align='center',
+            xanchor='center',
+            yanchor='middle',
+            font=dict(
+                size=16,
+                color=color
+            )
+        ))
+        
+        # Add type and values
+        annotations.append(dict(
+            x=0.73,
+            y=y_pos,
+            text=f"<b>{row['type']}</b><br>{value_text} ({percent_text})",
             showarrow=False,
             align='center',
             xanchor='center',
@@ -396,10 +434,12 @@ def create_portfolio_overview():
         showlegend=False,
         annotations=annotations,
         height=500,
-        margin=dict(l=50, r=50, t=50, b=50)
+        margin=dict(l=50, r=50, t=50, b=50),
+        paper_bgcolor='rgba(0,0,0,0)',  # Transparent background
+        plot_bgcolor='rgba(0,0,0,0)'    # Transparent background
     )
 
-    return fig.to_json({"staticPlot": True})
+    return fig.to_json()
 
 @app.route('/')
 def index():
@@ -408,6 +448,7 @@ def index():
 @app.route('/api/portfolio_overview')
 def portfolio_overview():
     return jsonify(create_portfolio_overview())
+    return;
 
 @app.route('/api/accounts')
 def get_accounts():

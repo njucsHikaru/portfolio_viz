@@ -109,10 +109,10 @@
             margin: 10px 0;
         }
         .positive {
-            color: #00b894;
+            color: #22c55e;
         }
         .negative {
-            color: #ff7675;
+            color: #ef4444;
         }
         .filter-section {
             background-color: #363636;
@@ -724,12 +724,14 @@
             // Group holdings by type and calculate values
             const portfolioByType = {};
             let totalValue = 0;
+            let totalGainLoss = 0;
+
             
             // First pass: calculate total value
             filteredData.forEach(holding => {
                 totalValue += parseFloat(holding.value) || 0;
+                totalGainLoss += parseFloat(holding.gain_loss) || 0;
             });
-
             // Second pass: group by type and calculate percentages
             filteredData.forEach(holding => {
                 const type = holding.type;
@@ -777,12 +779,24 @@
                 font: { size: 14 }
             });
 
+            // Add total gain / loss
+            annotations.push({
+                x: 0.75,
+                y: 0.8,
+                text: `<b>Total Gain/Loss:</b><br><span style='color: ${totalGainLoss >= 0 ? "#22c55e" : "#ef4444"}'>${totalGainLoss >= 0 ? "+" : ""}${formatCurrency(totalGainLoss)}</span>`,
+                showarrow: false,
+                align: 'center',
+                xanchor: 'center',
+                yanchor: 'top',
+                font: { size: 14 }
+            });
+
             // Add individual asset type details
             const spacing = 0.8 / (types.length + 1);
             sortedTypes.forEach((type, i) => {
                 const value = portfolioByType[type].value;
                 const percentage = portfolioByType[type].percentage;
-                const y_pos = 0.8 - (i + 1) * spacing;
+                const y_pos = 0.75 - (i + 1) * spacing;
                 
                 annotations.push({
                     x: 0.75,
@@ -803,10 +817,8 @@
                 type: 'pie',
                 domain: { x: [0, 0.5], y: [0, 1] },
                 textposition: 'inside',
-                texttemplate: '%{label}<br>%{percent:.1f}%',
                 hovertemplate: '<b>%{label}</b><br>' +
-                             'Value: ' + formatCurrency('%{value}') + '<br>' +
-                             'Allocation: %{percent:.1f}%<br>' +
+                             'Value: %{value} <br>' +
                              '<extra></extra>',
                 textinfo: 'label+percent',
                 direction: 'clockwise',
@@ -964,7 +976,8 @@
         function loadSummary() {
             $.get('/api/portfolio_summary', function(data) {
                 $('#total-value').text(formatCurrency(data.total_value));
-                $('#total-gain').text(formatCurrency(data.total_gain))
+                const gainLossElement = $('#total-gain');
+                gainLossElement.text(data.total_gain >= 0 ? `+${formatCurrency(data.total_gain)}` : formatCurrency(data.total_gain))
                     .addClass(data.total_gain >= 0 ? 'positive' : 'negative');
                 $('#cash-balance').text(formatCurrency(data.cash_balance));
             });
