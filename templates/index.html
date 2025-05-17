@@ -6,6 +6,7 @@
     <title>Investment Portfolio Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         .card {
             margin-bottom: 20px;
@@ -40,120 +41,108 @@
             color: #6c757d;
             font-size: 14px;
         }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .number {
+            text-align: right;
+        }
+        .summary-item {
+            margin: 10px 0;
+        }
+        .positive {
+            color: #28a745;
+        }
+        .negative {
+            color: #dc3545;
+        }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <h1 class="dashboard-title">Investment Portfolio Dashboard</h1>
+    <div class="container">
+        <h1>Portfolio Overview</h1>
         
-        <!-- Summary Row -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="summary-box">
-                    <div class="summary-value" id="totalValue">$0.00</div>
-                    <div class="summary-label">Total Portfolio Value</div>
-                </div>
+        <!-- Summary Section -->
+        <div class="summary-box">
+            <div class="summary-item">
+                <strong>Total Portfolio Value: </strong>
+                <span id="total-value">Loading...</span>
             </div>
-            <div class="col-md-3">
-                <div class="summary-box">
-                    <div class="summary-value" id="totalGain">$0.00</div>
-                    <div class="summary-label">Total Gain/Loss</div>
-                </div>
+            <div class="summary-item">
+                <strong>Total Gain/Loss: </strong>
+                <span id="total-gain">Loading...</span>
             </div>
-            <div class="col-md-3">
-                <div class="summary-box">
-                    <div class="summary-value" id="dayChange">$0.00</div>
-                    <div class="summary-label">Day's Change</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="summary-box">
-                    <div class="summary-value" id="cashBalance">$0.00</div>
-                    <div class="summary-label">Cash Balance</div>
-                </div>
+            <div class="summary-item">
+                <strong>Cash Balance: </strong>
+                <span id="cash-balance">Loading...</span>
             </div>
         </div>
 
-        <!-- Charts Row -->
-        <div class="row">
-            <!-- Asset Allocation -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        Asset Allocation
-                    </div>
-                    <div class="card-body chart-container">
-                        <div id="portfolioOverview"></div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Stock Distribution -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        Holdings Distribution
-                    </div>
-                    <div class="card-body chart-container">
-                        <div id="stockDistribution"></div>
-                    </div>
-                </div>
-            </div>
+        <!-- Charts Section -->
+        <div class="chart-container">
+            <div id="portfolio-overview"></div>
         </div>
 
         <!-- Holdings Table -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        Current Holdings
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover" id="holdingsTable">
-                                <thead>
-                                    <tr>
-                                        <th>Symbol</th>
-                                        <th>Description</th>
-                                        <th>Quantity</th>
-                                        <th>Price</th>
-                                        <th>Market Value</th>
-                                        <th>Cost Basis</th>
-                                        <th>Gain/Loss</th>
-                                        <th>% of Portfolio</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Will be populated by JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <h2>Current Holdings</h2>
+        <table id="holdings-table">
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th class="number">Quantity</th>
+                    <th class="number">Price</th>
+                    <th class="number">Value</th>
+                    <th class="number">Cost Basis</th>
+                    <th class="number">Gain/Loss</th>
+                    <th class="number">% of Portfolio</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Holdings will be populated here -->
+            </tbody>
+        </table>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function formatCurrency(value) {
-            if (value === null || value === undefined || isNaN(value)) return '$0.00';
+        // Format currency
+        function formatCurrency(amount) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: 'USD'
-            }).format(value);
+            }).format(amount);
         }
 
-        function formatNumber(value) {
-            if (value === null || value === undefined || isNaN(value)) return '0';
-            return new Intl.NumberFormat('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(value);
-        }
-
-        function formatPercent(value) {
-            if (value === null || value === undefined || isNaN(value)) return '0.00%';
+        // Format percentage
+        function formatPercentage(value) {
             return new Intl.NumberFormat('en-US', {
                 style: 'percent',
                 minimumFractionDigits: 2,
@@ -161,120 +150,62 @@
             }).format(value / 100);
         }
 
-        function updateSummary() {
-            fetch('/api/portfolio_summary')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('totalValue').textContent = formatCurrency(data.total_value);
-                    document.getElementById('totalGain').textContent = formatCurrency(data.total_gain);
-                    document.getElementById('dayChange').textContent = formatCurrency(data.day_change);
-                    document.getElementById('cashBalance').textContent = formatCurrency(data.cash_balance);
-                    
-                    // Update colors for gain/loss
-                    const totalGainElement = document.getElementById('totalGain');
-                    totalGainElement.style.color = data.total_gain >= 0 ? '#28a745' : '#dc3545';
-                    
-                    const dayChangeElement = document.getElementById('dayChange');
-                    dayChangeElement.style.color = data.day_change >= 0 ? '#28a745' : '#dc3545';
+        // Load and display holdings
+        function loadHoldings(assetType = 'all') {
+            $.get(`/api/holdings/${assetType}`, function(data) {
+                const tbody = $('#holdings-table tbody');
+                tbody.empty();
+
+                data.forEach(holding => {
+                    const gainLossClass = holding.gain_loss >= 0 ? 'positive' : 'negative';
+                    tbody.append(`
+                        <tr>
+                            <td>${holding.symbol}</td>
+                            <td>${holding.description}</td>
+                            <td>${holding.type}</td>
+                            <td class="number">${holding.quantity ? holding.quantity.toLocaleString() : '-'}</td>
+                            <td class="number">${holding.price ? formatCurrency(holding.price) : '-'}</td>
+                            <td class="number">${formatCurrency(holding.value)}</td>
+                            <td class="number">${formatCurrency(holding.cost_basis)}</td>
+                            <td class="number ${gainLossClass}">${formatCurrency(holding.gain_loss)}</td>
+                            <td class="number">${formatPercentage(holding.portfolio_percentage)}</td>
+                        </tr>
+                    `);
                 });
+            });
         }
 
-        function updateHoldingsTable() {
-            fetch('/api/holdings')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Holdings data:', data);  // Debug log
-                    const tbody = document.querySelector('#holdingsTable tbody');
-                    tbody.innerHTML = '';
-                    
-                    if (!Array.isArray(data) || data.length === 0) {
-                        const row = document.createElement('tr');
-                        row.innerHTML = '<td colspan="8" class="text-center">No holdings data available</td>';
-                        tbody.appendChild(row);
-                        return;
-                    }
-                    
-                    // First add Account Total row with a different style
-                    const accountTotal = data.find(h => h.type === 'Account Total');
-                    if (accountTotal) {
-                        const totalRow = document.createElement('tr');
-                        totalRow.className = 'table-secondary fw-bold';
-                        totalRow.innerHTML = `
-                            <td>${accountTotal.symbol}</td>
-                            <td>${accountTotal.description}</td>
-                            <td class="text-end">-</td>
-                            <td class="text-end">-</td>
-                            <td class="text-end">${formatCurrency(accountTotal.value)}</td>
-                            <td class="text-end">${formatCurrency(accountTotal.cost_basis)}</td>
-                            <td class="text-end" style="color: ${accountTotal.gain_loss >= 0 ? '#28a745' : '#dc3545'}">
-                                ${formatCurrency(accountTotal.gain_loss)}
-                            </td>
-                            <td class="text-end">${formatPercent(accountTotal.portfolio_percentage)}</td>
-                        `;
-                        tbody.appendChild(totalRow);
-                        
-                        // Add a separator row
-                        const separatorRow = document.createElement('tr');
-                        separatorRow.innerHTML = '<td colspan="8" class="p-0"><hr class="my-2"></td>';
-                        tbody.appendChild(separatorRow);
-                    }
-                    
-                    // Then add individual positions
-                    data.filter(h => h.type !== 'Account Total')
-                        .sort((a, b) => b.value - a.value)
-                        .forEach(holding => {
-                            const row = document.createElement('tr');
-                            const gainLossColor = holding.gain_loss >= 0 ? '#28a745' : '#dc3545';
-                            
-                            row.innerHTML = `
-                                <td><strong>${holding.symbol || ''}</strong></td>
-                                <td>${holding.description || ''}</td>
-                                <td class="text-end">${formatNumber(holding.quantity)}</td>
-                                <td class="text-end">${formatCurrency(holding.price)}</td>
-                                <td class="text-end">${formatCurrency(holding.value)}</td>
-                                <td class="text-end">${formatCurrency(holding.cost_basis)}</td>
-                                <td class="text-end" style="color: ${gainLossColor}">
-                                    ${formatCurrency(holding.gain_loss)}
-                                </td>
-                                <td class="text-end">${formatPercent(holding.portfolio_percentage)}</td>
-                            `;
-                            tbody.appendChild(row);
-                        });
-                })
-                .catch(error => {
-                    console.error('Error fetching holdings:', error);
-                    const tbody = document.querySelector('#holdingsTable tbody');
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error loading holdings data</td></tr>';
-                });
+        // Load portfolio summary
+        function loadSummary() {
+            $.get('/api/portfolio_summary', function(data) {
+                $('#total-value').text(formatCurrency(data.total_value));
+                $('#total-gain').text(formatCurrency(data.total_gain))
+                    .addClass(data.total_gain >= 0 ? 'positive' : 'negative');
+                $('#cash-balance').text(formatCurrency(data.cash_balance));
+            });
         }
 
-        // Load all data when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load Portfolio Overview
-            fetch('/api/portfolio_overview')
-                .then(response => response.json())
-                .then(data => {
-                    Plotly.newPlot('portfolioOverview', JSON.parse(data));
-                })
-                .catch(error => console.error('Error loading portfolio overview:', error));
+        // Load and display charts
+        function loadCharts() {
+            // Load portfolio overview chart
+            $.get('/api/portfolio_overview', function(data) {
+                const chart = JSON.parse(data);
+                Plotly.newPlot('portfolio-overview', chart.data, chart.layout);
+                
+                // Add click event handler
+                document.getElementById('portfolio-overview').on('plotly_click', function(data) {
+                    const point = data.points[0];
+                    const assetType = point.label;
+                    loadHoldings(assetType);
+                });
+            });
+        }
 
-            // Load Stock Distribution
-            fetch('/api/stock_distribution')
-                .then(response => response.json())
-                .then(data => {
-                    Plotly.newPlot('stockDistribution', JSON.parse(data));
-                })
-                .catch(error => console.error('Error loading stock distribution:', error));
-
-            // Update summary and holdings table
-            updateSummary();
-            updateHoldingsTable();
-
-            // Set up automatic refresh every 5 minutes
-            setInterval(() => {
-                updateSummary();
-                updateHoldingsTable();
-            }, 300000);
+        // Initial load
+        $(document).ready(function() {
+            loadSummary();
+            loadCharts();
+            loadHoldings();
         });
     </script>
 </body>

@@ -7,6 +7,23 @@ import traceback
 
 app = Flask(__name__)
 
+def standardize_type(type_str):
+    """Standardize asset type names"""
+    type_mapping = {
+        'Stock': 'Stocks',
+        'Equity': 'Stocks',
+        'ETF': 'ETFs',
+        'ETFs & Closed End Funds': 'ETFs',
+        'CASH': 'Cash',
+        'Bond': 'Bonds',
+        'Fixed Income': 'Bonds',
+        'Mutual Fund': 'Mutual Funds',
+        'Money Market': 'Cash',
+        'Cash and Money Market': 'Cash',
+        'Security Type': 'Unknown'
+    }
+    return type_mapping.get(str(type_str).strip(), type_str)
+
 def load_and_process_data():
     # Get all CSV files from input directory
     input_dir = Path("input")
@@ -87,21 +104,20 @@ def load_and_process_data():
                         quantity_cols = ['Quantity', 'Qty (Quantity)']
                         price_cols = ['Last Price', 'Price']
                     
+                    # Determine initial type
+                    initial_type = str(row.get('Type', row.get('Security Type', 'Unknown')))
+                    
                     # Create position dictionary
                     position = {
                         'symbol': symbol,
                         'description': description,
-                        'type': str(row.get('Type', row.get('Security Type', 'Stock'))),
+                        'type': initial_type,  # We'll standardize this later
                         'value': get_value_from_columns(row, value_cols),
                         'cost_basis': get_value_from_columns(row, cost_basis_cols),
-                        'gain_loss': get_value_from_columns(row, gain_loss_cols)
-                    }
-                    
-                    # Add quantity and price
-                    position.update({
+                        'gain_loss': get_value_from_columns(row, gain_loss_cols),
                         'quantity': get_value_from_columns(row, quantity_cols),
                         'price': get_value_from_columns(row, price_cols)
-                    })
+                    }
                     
                     # Add to positions list
                     all_positions.append(position)
@@ -115,70 +131,58 @@ def load_and_process_data():
             print(f"Error processing file {csv_file}: {e}")
             traceback.print_exc()
     
-    # Convert to DataFrames
+    # Convert to DataFrame
     positions_df = pd.DataFrame(all_positions)
-    account_totals_df = pd.DataFrame(account_totals)
+    
+    # Standardize types based on symbols and descriptions
+    def determine_asset_type(row):
+        symbol = str(row['symbol'])
+        description = str(row['description'])
+        
+        # Cash/Money Market
+        if any(cash_sym in symbol.upper() for cash_sym in ['SPAXX', 'FDRXX', 'SNSXX']):
+            return 'Cash'
+        
+        # ETFs
+        if symbol in ['VOO', 'QQQ', 'TLT', 'IBIT']:
+            return 'ETFs'
+        
+        # Mutual Funds
+        if 'VANGUARD TARGET' in description.upper():
+            return 'Mutual Funds'
+        
+        # Bonds
+        if symbol.startswith('91281') or 'TREASURY' in description.upper():
+            return 'Bonds'
+        
+        # Stocks (common stock symbols)
+        stock_symbols = ['NVDA', 'GOOG', 'GOOGL', 'MSFT', 'AMZN', 'AAPL', 'META', 'ASML', 'UBER', 
+                        'KO', 'MCD', 'AMD', 'BILI', 'U', 'FFAI', 'SMCI', 'TSLA']
+        if symbol in stock_symbols:
+            return 'Stocks'
+        
+        # Map any remaining types using the standardization function
+        return standardize_type(row['type'])
+    
+    # Apply type standardization
+    positions_df['type'] = positions_df.apply(determine_asset_type, axis=1)
+    
+    # Set any remaining Unknown types to Stocks
+    positions_df.loc[positions_df['type'] == 'Unknown', 'type'] = 'Stocks'
     
     print(f"\nProcessed data summary:")
     print(f"Number of positions: {len(positions_df)}")
-    print(f"Number of account totals: {len(account_totals_df)}")
     
     if not positions_df.empty:
         print("\nPositions DataFrame columns:", positions_df.columns.tolist())
         print("\nSample of positions:")
         print(positions_df[['symbol', 'description', 'value', 'gain_loss']].head().to_string())
+        print("\nUnique types after processing:", positions_df['type'].unique())
     
-    return positions_df, account_totals_df
+    return positions_df, pd.DataFrame(account_totals)
 
 def create_portfolio_overview():
     df = load_and_process_data()[0]
-    
-    # Clean up and standardize asset types
-    type_mapping = {
-        'Stock': 'Stocks',
-        'Equity': 'Stocks',
-        'ETF': 'ETFs',
-        'ETFs & Closed End Funds': 'ETFs',
-        'CASH': 'Cash',
-        'Bond': 'Bonds',
-        'Fixed Income': 'Bonds',
-        'Mutual Fund': 'Mutual Funds',
-        'Money Market': 'Cash',
-        'Cash and Money Market': 'Cash'
-    }
-    
-    # Print unique types before mapping
-    print("Unique types before mapping:", df['type'].unique())
-    
-    # Clean up NaN values and identify asset types based on multiple criteria
-    df['type'] = df['type'].fillna('Unknown')
-    
-    # First identify specific assets
-    
-    # 1. Identify money market funds (these are true cash positions)
-    cash_symbols = ['SPAXX', 'FDRXX', 'SNSXX']
-    df.loc[df['symbol'].str.contains('|'.join(cash_symbols), case=False, na=False), 'type'] = 'Cash'
-    
-    # 2. Identify ETFs based on common ETF symbols
-    etf_symbols = ['VOO', 'QQQ', 'TLT', 'IBIT']
-    df.loc[df['symbol'].isin(etf_symbols), 'type'] = 'ETFs'
-    
-    # 3. Identify stocks based on description
-    stock_keywords = ['CORP', 'INC', 'CO', 'LTD', 'TECHNOLOGIES', 'PLATFORMS']
-    df.loc[df['description'].str.contains('|'.join(stock_keywords), case=False, na=False) & (df['type'] == 'Unknown'), 'type'] = 'Stocks'
-    
-    # 4. Identify stocks based on common stock symbols
-    stock_symbols = ['NVDA', 'GOOG', 'GOOGL', 'MSFT', 'AMZN', 'AAPL', 'META', 'ASML', 'UBER', 'KO', 'MCD', 'AMD', 'BILI', 'U', 'FFAI']
-    df.loc[df['symbol'].isin(stock_symbols), 'type'] = 'Stocks'
-    
-    # 5. Map remaining types using type_mapping
-    df['type'] = df.apply(lambda row: type_mapping.get(str(row['type']).strip(), row['type']), axis=1)
-    
-    # 6. Identify mutual funds based on description
-    df.loc[df['description'].str.contains('VANGUARD TARGET', case=False, na=False), 'type'] = 'Mutual Funds'
-    
-    # Print unique types after mapping
-    print("Unique types after mapping:", df['type'].unique())
     
     # Calculate total portfolio value by type
     portfolio_by_type = df.groupby('type').agg({
@@ -186,166 +190,145 @@ def create_portfolio_overview():
         'symbol': 'count'
     }).reset_index()
     
-    # Remove Unknown type if value is 0
-    portfolio_by_type = portfolio_by_type[~((portfolio_by_type['type'] == 'Unknown') & (portfolio_by_type['value'] == 0))]
+    # Sort by value descending
+    portfolio_by_type = portfolio_by_type.sort_values('value', ascending=False)
     
     total_value = portfolio_by_type['value'].sum()
     portfolio_by_type['percentage'] = (portfolio_by_type['value'] / total_value * 100).round(2)
     
-    # Sort by value descending
-    portfolio_by_type = portfolio_by_type.sort_values('value', ascending=False)
-    
-    print("Portfolio by type:")
+    print("\nPortfolio breakdown by type:")
     for _, row in portfolio_by_type.iterrows():
         print(f"{row['type']}: ${row['value']:,.2f} ({row['percentage']}%), {row['symbol']} holdings")
     
-    # Create pie chart with improved styling
-    fig = px.pie(portfolio_by_type, 
-                 values='value', 
-                 names='type',
-                 title='Asset Allocation',
-                 custom_data=['percentage', 'symbol'])
+    # Create figure with subplots
+    fig = go.Figure()
     
-    fig.update_traces(
+    # Print detailed pie chart data for debugging
+    print("\nDetailed Pie Chart Data:")
+    print("Total Portfolio Value:", f"${total_value:,.2f}")
+    print("\nBreakdown by Type:")
+    for _, row in portfolio_by_type.iterrows():
+        print(f"{row['type']}:")
+        print(f"  Value: ${row['value']:,.2f}")
+        print(f"  Percentage: {row['percentage']:.2f}%")
+        print(f"  Number of holdings: {row['symbol']}")
+        print("---")
+    
+    # Add pie chart to the left side
+    fig.add_trace(go.Pie(
+        values=portfolio_by_type['value'],
+        labels=portfolio_by_type['type'],
+        domain={'x': [0, 0.5], 'y': [0, 1]},
         textposition='inside',
-        texttemplate='%{label}<br>${%{value:,.0f}<br>%{percent:.1%}',
+        texttemplate='%{label}<br>%{percent:.1f}%',
         hovertemplate='<b>%{label}</b><br>' +
                      'Value: $%{value:,.2f}<br>' +
-                     'Allocation: %{percent:.1%}<br>' +
-                     'Holdings: %{customdata[1]}<extra></extra>'
-    )
+                     'Allocation: %{percent:.1f}%<br>' +
+                     '<extra></extra>',
+        textinfo='label+percent',
+        direction='clockwise',
+        sort=False
+    ))
     
+    # Add text annotations for the total and each asset type
+    annotations = []
+    
+    # Add total portfolio value at the top
+    annotations.append(dict(
+        x=0.75,  # Position in right half
+        y=0.95,  # Near top
+        text=f"<b>Total Portfolio Value:</b><br>${total_value:,.2f}",
+        showarrow=False,
+        align='center',
+        xanchor='center',
+        yanchor='top',
+        font=dict(size=14)
+    ))
+    
+    # Add individual asset type details
+    num_types = len(portfolio_by_type)
+    spacing = 0.8 / (num_types + 1)  # Distribute entries evenly
+    
+    for i, (_, row) in enumerate(portfolio_by_type.iterrows()):
+        y_pos = 0.8 - (i + 1) * spacing  # Start below total value
+        annotations.append(dict(
+            x=0.75,  # Position in right half
+            y=y_pos,
+            text=f"<b>{row['type']}</b><br>${row['value']:,.2f} ({row['percentage']:.1f}%)",
+            showarrow=False,
+            align='center',
+            xanchor='center',
+            yanchor='middle',
+            font=dict(size=12)
+        ))
+    
+    # Update layout
     fig.update_layout(
-        showlegend=True,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1
-        ),
-        margin=dict(l=20, r=20, t=40, b=20)
+        title={
+            'text': 'Asset Allocation (Click to filter holdings)',
+            'y': 0.95,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'
+        },
+        showlegend=False,
+        annotations=annotations,
+        height=500,
+        margin=dict(l=50, r=50, t=50, b=50)
     )
     
     return fig.to_json()
 
-def create_stock_distribution():
-    df = load_and_process_data()[0]
-    
-    # Filter for stocks and ETFs
-    stocks_df = df[df['type'].str.lower().isin(['stocks', 'etfs'])]
-    
-    print(f"\nProcessing stock distribution. Found {len(stocks_df)} stock/ETF positions")
-    print("Types included:", stocks_df['type'].unique())
-    
-    if len(stocks_df) == 0:
-        print("No stock holdings found")
-        return "{}"
-    
-    # Group by symbol and calculate metrics
-    stock_dist = stocks_df.groupby('symbol').agg({
-        'value': 'sum',
-        'description': 'first',
-        'quantity': 'sum',
-        'price': 'first',
-        'type': 'first'
-    }).reset_index()
-    
-    # Calculate percentage of total stock/ETF value
-    total_stock_value = stock_dist['value'].sum()
-    stock_dist['percentage'] = (stock_dist['value'] / total_stock_value * 100).round(2)
-    
-    # Sort by value descending
-    stock_dist = stock_dist.sort_values('value', ascending=False)
-    
-    print("\nTop 10 holdings:")
-    for _, row in stock_dist.head(10).iterrows():
-        print(f"{row['symbol']} ({row['type']}): ${row['value']:,.2f} ({row['percentage']}%)")
-    
-    # Create treemap with improved styling
-    fig = px.treemap(
-        stock_dist,
-        path=['type', 'symbol'],  # Group by type first, then symbol
-        values='value',
-        custom_data=['description', 'quantity', 'price', 'percentage'],
-        title='Stock & ETF Holdings Distribution'
-    )
-    
-    fig.update_traces(
-        textinfo='label+value+percent parent',
-        hovertemplate="""
-            <b>%{label}</b><br>
-            %{customdata[0]}<br>
-            Shares: %{customdata[1]:,.0f}<br>
-            Price: $%{customdata[2]:,.2f}<br>
-            Value: $%{value:,.2f}<br>
-            Portfolio: %{customdata[3]:.1f}%
-            <extra></extra>
-        """
-    )
-    
-    fig.update_layout(
-        margin=dict(l=20, r=20, t=40, b=20)
-    )
-    
-    return fig.to_json()
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-@app.route('/api/holdings')
-def get_holdings():
+@app.route('/api/portfolio_overview')
+def portfolio_overview():
+    return jsonify(create_portfolio_overview())
+
+@app.route('/api/holdings/<asset_type>')
+def get_holdings_by_type(asset_type):
     try:
-        positions_df, account_totals_df = load_and_process_data()
+        positions_df, _ = load_and_process_data()
         
-        print("\nPreparing holdings data...")
+        # Filter positions by type
+        if asset_type != 'all':
+            positions_df = positions_df[positions_df['type'] == asset_type]
+        
+        print(f"\nFiltering holdings for type: {asset_type}")
+        print(f"Found {len(positions_df)} positions")
+        
         holdings = []
+        total_value = positions_df['value'].sum()
         
-        # First add Account Total
-        if not account_totals_df.empty:
-            for _, row in account_totals_df.iterrows():
+        for _, row in positions_df.iterrows():
+            try:
+                value = float(row['value'])
+                portfolio_percentage = (value / total_value * 100) if total_value > 0 else 0
+                
                 holding = {
-                    'symbol': row['symbol'],
-                    'description': row['description'],
-                    'type': row['type'],
-                    'value': float(row['value']),
+                    'symbol': str(row['symbol']),
+                    'description': str(row['description']),
+                    'type': str(row['type']),
+                    'quantity': float(row['quantity']) if 'quantity' in row else None,
+                    'price': float(row['price']) if 'price' in row else None,
+                    'value': value,
                     'cost_basis': float(row['cost_basis']),
                     'gain_loss': float(row['gain_loss']),
-                    'portfolio_percentage': 100.0
+                    'portfolio_percentage': round(portfolio_percentage, 2),
+                    'asset_type': str(row['type'])
                 }
                 holdings.append(holding)
-                print(f"Added Account Total: {holding['symbol']} - Value: ${holding['value']:,.2f}")
+                print(f"Added Position: {holding['symbol']} - Value: ${holding['value']:,.2f}")
+            except Exception as e:
+                print(f"Error processing position: {e}")
+                continue
         
-        # Then add individual positions
-        if not positions_df.empty:
-            total_value = positions_df['value'].sum()
-            print(f"Total value for percentage calculation: ${total_value:,.2f}")
-            
-            for _, row in positions_df.iterrows():
-                try:
-                    value = float(row['value'])
-                    portfolio_percentage = (value / total_value * 100) if total_value > 0 else 0
-                    
-                    holding = {
-                        'symbol': str(row['symbol']),
-                        'description': str(row['description']),
-                        'type': str(row['type']),
-                        'quantity': float(row['quantity']) if 'quantity' in row else None,
-                        'price': float(row['price']) if 'price' in row else None,
-                        'value': value,
-                        'cost_basis': float(row['cost_basis']),
-                        'gain_loss': float(row['gain_loss']),
-                        'portfolio_percentage': round(portfolio_percentage, 2),
-                        'asset_type': str(row['type'])
-                    }
-                    holdings.append(holding)
-                    print(f"Added Position: {holding['symbol']} ({holding['asset_type']}) - Value: ${holding['value']:,.2f} - {holding['portfolio_percentage']}%")
-                except Exception as e:
-                    print(f"Error processing position: {e}")
-                    continue
-        
-        print(f"\nTotal holdings to return: {len(holdings)}")
         return jsonify(holdings)
     
     except Exception as e:
-        print(f"Error in get_holdings: {e}")
+        print(f"Error in get_holdings_by_type: {e}")
         traceback.print_exc()
         return jsonify([])
 
@@ -373,11 +356,6 @@ def get_portfolio_summary():
             print(f"{row['symbol']}: ${row['value']:,.2f}")
         print(f"\nTotal Cash Balance: ${cash_balance:,.2f}")
         
-        # Print all positions for debugging
-        print("\nAll positions:")
-        for _, row in positions_df.iterrows():
-            print(f"{row['symbol']}: Value=${row['value']:,.2f}, Gain/Loss=${row['gain_loss']:,.2f}")
-        
         return jsonify({
             'total_value': float(total_value),
             'total_gain': float(total_gain_loss),
@@ -394,17 +372,10 @@ def get_portfolio_summary():
             'cash_balance': 0
         })
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/api/portfolio_overview')
-def portfolio_overview():
-    return jsonify(create_portfolio_overview())
-
-@app.route('/api/stock_distribution')
-def stock_distribution():
-    return jsonify(create_stock_distribution())
-
 if __name__ == '__main__':
-    app.run(debug=True) 
+    # Print pie chart data
+    print("\nGenerating pie chart data...")
+    create_portfolio_overview()
+    
+    # Start the Flask app on port 8080
+    app.run(debug=True, host='0.0.0.0', port=8080) 
