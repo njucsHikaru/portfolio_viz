@@ -333,10 +333,14 @@ def get_portfolio_summary():
         total_gain_loss = positions_df['gain_loss'].sum()
         print(f"Total Gain/Loss: ${total_gain_loss:,.2f}")
         
-        # Calculate cash balance (if any cash positions exist)
-        cash_positions = positions_df[positions_df['type'].str.contains('Cash', case=False, na=False)]
+        # Calculate cash balance (only include money market funds)
+        cash_symbols = ['SPAXX', 'FDRXX', 'SNSXX']
+        cash_positions = positions_df[positions_df['symbol'].str.contains('|'.join(cash_symbols), case=False, na=False)]
         cash_balance = cash_positions['value'].sum() if not cash_positions.empty else 0.0
-        print(f"Cash Balance: ${cash_balance:,.2f}")
+        print(f"\nCash positions found:")
+        for _, row in cash_positions.iterrows():
+            print(f"{row['symbol']}: ${row['value']:,.2f}")
+        print(f"\nTotal Cash Balance: ${cash_balance:,.2f}")
         
         # Print all positions for debugging
         print("\nAll positions:")
