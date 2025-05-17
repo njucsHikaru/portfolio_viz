@@ -24,10 +24,11 @@ pip install -r requirements.txt
 ```
 
 3. Place your portfolio CSV files in the `input` directory:
+   - Currently we support Schwab & Fidelity Position export csv files, please rename you Schwab file to schwab.csv
    - Example files are provided in `input/example_portfolio.csv` and `input/schwab.csv`
    - The application supports both Fidelity and Schwab export formats
 
-4. Run the application:
+5. Run the application:
 ```bash
 python app.py
 ```
