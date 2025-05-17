@@ -25,7 +25,7 @@ cd portfolio_viz
 pip install -r requirements.txt
 ```
 
-3. Place your portfolio CSV files in the `input` directory:
+3. [Optional] Place your portfolio CSV files in the `input` directory:
    - Example files are provided in `input/example_portfolio.csv` and `input/schwab.csv`
    - The application supports both Fidelity and Schwab export formats
    - Please rename your Schwab file to schwab.csv
