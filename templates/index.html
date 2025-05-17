@@ -38,6 +38,12 @@
             border-radius: 8px;
             padding: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-box > div {
+            flex: 1;
         }
         .summary-box {
             background-color: #f8f9fa;
@@ -388,7 +394,7 @@
                                             const gainLossClass = position.gain_loss >= 0 ? 'positive' : 'negative';
                                             const rowClass = position.account === 'Total' ? 'total-row' : '';
                                             const unitCost = position.quantity ? position.cost_basis / position.quantity : 0;
-                                            const unitCostClass = unitCost < position.price ? 'negative' : 'positive';
+                                            const unitCostClass = unitCost > position.price ? 'negative' : 'positive';
                                             return `
                                                 <tr class="${rowClass}">
                                                     <td>${position.account}</td>
@@ -518,7 +524,7 @@
             const trace = {
                 x: sortedData.map(h => h.symbol),
                 y: sortedData.map(h => h.value),
-                text: sortedData.map(h => formatCurrency(h.value)),
+                text: sortedData.map(h => `${h.symbol}<br>${formatCurrency(h.value)}`),
                 textposition: 'auto',
                 type: 'bar',
                 marker: {
@@ -536,22 +542,28 @@
                 title: 'Holdings by Value',
                 showlegend: false,
                 xaxis: {
-                    title: 'Symbol',
-                    tickangle: -45
+                    showticklabels: true,     // Show symbol labels
+                    tickangle: -45,           // Rotate labels
+                    title: '',                // Hide axis title
+                    showgrid: false,          // Hide x-axis grid
+                    zeroline: false           // Hide x-axis zero line
                 },
                 yaxis: {
                     title: 'Value',
                     tickformat: '$,.0f',
-                    range: [0, maxValue * 1.1]  // Add 10% padding to top
+                    range: [0, maxValue * 1.1],  // Add 10% padding to top
+                    showgrid: true,              // Show y-axis grid
+                    gridcolor: '#f0f0f0'         // Light grid color
                 },
                 margin: {
-                    b: 100,  // Increase bottom margin for rotated labels
-                    t: 50,   // Top margin for title
                     l: 100,  // Left margin for y-axis labels
-                    r: 50    // Right margin
+                    r: 20,   // Reduced right margin
+                    t: 40,   // Reduced top margin
+                    b: 80    // Increased bottom margin for symbol labels
                 },
-                height: 400,  // Fixed height
-                bargap: 0.15  // Adjust gap between bars
+                bargap: 0.1,  // Reduce gap between bars
+                plot_bgcolor: 'white',
+                paper_bgcolor: 'white'
             };
 
             const config = {
