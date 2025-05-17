@@ -153,10 +153,7 @@ def create_portfolio_overview():
     # Clean up NaN values and identify asset types based on multiple criteria
     df['type'] = df['type'].fillna('Unknown')
     
-    # First apply the type mapping
-    df['type'] = df['type'].apply(lambda x: type_mapping.get(str(x).strip(), str(x).strip()))
-    
-    # Then identify specific assets
+    # First identify specific assets
     
     # 1. Identify money market funds (these are true cash positions)
     cash_symbols = ['SPAXX', 'FDRXX', 'SNSXX']
@@ -173,6 +170,12 @@ def create_portfolio_overview():
     # 4. Identify stocks based on common stock symbols
     stock_symbols = ['NVDA', 'GOOG', 'GOOGL', 'MSFT', 'AMZN', 'AAPL', 'META', 'ASML', 'UBER', 'KO', 'MCD', 'AMD', 'BILI', 'U', 'FFAI']
     df.loc[df['symbol'].isin(stock_symbols), 'type'] = 'Stocks'
+    
+    # 5. Map remaining types using type_mapping
+    df['type'] = df.apply(lambda row: type_mapping.get(str(row['type']).strip(), row['type']), axis=1)
+    
+    # 6. Identify mutual funds based on description
+    df.loc[df['description'].str.contains('VANGUARD TARGET', case=False, na=False), 'type'] = 'Mutual Funds'
     
     # Print unique types after mapping
     print("Unique types after mapping:", df['type'].unique())
@@ -205,7 +208,7 @@ def create_portfolio_overview():
     
     fig.update_traces(
         textposition='inside',
-        texttemplate='%{label}<br>%{percent:.1%}',
+        texttemplate='%{label}<br>${%{value:,.0f}<br>%{percent:.1%}',
         hovertemplate='<b>%{label}</b><br>' +
                      'Value: $%{value:,.2f}<br>' +
                      'Allocation: %{percent:.1%}<br>' +
@@ -329,10 +332,11 @@ def get_holdings():
                         'value': value,
                         'cost_basis': float(row['cost_basis']),
                         'gain_loss': float(row['gain_loss']),
-                        'portfolio_percentage': round(portfolio_percentage, 2)
+                        'portfolio_percentage': round(portfolio_percentage, 2),
+                        'asset_type': str(row['type'])
                     }
                     holdings.append(holding)
-                    print(f"Added Position: {holding['symbol']} - Value: ${holding['value']:,.2f} - {holding['portfolio_percentage']}%")
+                    print(f"Added Position: {holding['symbol']} ({holding['asset_type']}) - Value: ${holding['value']:,.2f} - {holding['portfolio_percentage']}%")
                 except Exception as e:
                     print(f"Error processing position: {e}")
                     continue
