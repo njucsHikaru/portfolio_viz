@@ -1,7 +1,7 @@
 # Portfolio Visualization
 
 A web application for visualizing investment portfolio data from various sources (Fidelity, Schwab, etc.).
-<img width="2560" alt="image" src="https://github.com/user-attachments/assets/464feb9d-6a62-46a7-a4a8-c835b2732823" />
+<img width="1690" alt="image" src="https://github.com/user-attachments/assets/1be5b999-4d94-4e78-b417-ab58a07ba14c" />
 
 ## Features
 
